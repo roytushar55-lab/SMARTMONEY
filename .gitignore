@@ -2,7 +2,7 @@
 .vs/
 .vscode/
 
-# Build
+# Build output
 bin/
 obj/
 
@@ -11,6 +11,12 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
+
+# Rider
+.idea/
+
+# NuGet
+packages/
 
 # Logs
 *.log
