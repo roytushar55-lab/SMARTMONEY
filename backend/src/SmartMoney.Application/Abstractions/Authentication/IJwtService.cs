@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SmartMoney.Application.Abstractions.Authentication
 {
-    internal class IJwtService
+    public class IJwtService
     {
     }
 }

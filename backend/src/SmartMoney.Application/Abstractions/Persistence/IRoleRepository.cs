@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SmartMoney.Application.Abstractions.Persistence
 {
-    internal class IRoleRepository
+    public class IRoleRepository
     {
     }
 }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SmartMoney.Application.Abstractions.Authentication
 {
-    internal class IPasswordHasher
+    public class IPasswordHasher
     {
     }
 }
