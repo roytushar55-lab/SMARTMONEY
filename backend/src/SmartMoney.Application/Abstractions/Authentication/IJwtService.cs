@@ -1,0 +1,10 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace SmartMoney.Application.Abstractions.Authentication
+{
+    public class IJwtService
+    {
+    }
+}
