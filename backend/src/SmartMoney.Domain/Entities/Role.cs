@@ -5,8 +5,6 @@ namespace SmartMoney.Domain.Entities;
 
 public sealed class Role : BaseEntity
 {
-    public Guid Id { get; private set; } = Guid.NewGuid();
-
     public RoleType Name { get; private set; }
 
     public string Description { get; private set; } = string.Empty;
@@ -24,5 +22,7 @@ public sealed class Role : BaseEntity
     public void UpdateDescription(string description)
     {
         Description = description;
+
+        MarkAsUpdated();
     }
 }

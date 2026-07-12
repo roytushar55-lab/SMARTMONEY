@@ -12,6 +12,7 @@ public class User : BaseEntity
     public string MobileNumber { get; private set; } = string.Empty;
 
     public string PasswordHash { get; private set; } = string.Empty;
+
     public UserStatus Status { get; private set; } = UserStatus.Pending;
 
     public Guid RoleId { get; private set; }
@@ -24,7 +25,7 @@ public class User : BaseEntity
 
     public bool IsActive { get; private set; } = true;
 
-    public User()
+    private User()
     {
     }
 
@@ -63,25 +64,30 @@ public class User : BaseEntity
     public void ActivateAccount()
     {
         Status = UserStatus.Active;
+        MarkAsUpdated();
     }
 
     public void SuspendAccount()
     {
         Status = UserStatus.Suspended;
+        MarkAsUpdated();
     }
 
     public void BlockAccount()
     {
         Status = UserStatus.Blocked;
+        MarkAsUpdated();
     }
 
     public void DeleteAccount()
     {
         Status = UserStatus.Deleted;
+        MarkAsUpdated();
     }
 
     public void ChangeRole(Guid roleId)
     {
         RoleId = roleId;
+        MarkAsUpdated();
     }
 }
