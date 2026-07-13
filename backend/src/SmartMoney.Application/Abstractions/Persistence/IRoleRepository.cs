@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using SmartMoney.Domain.Entities;
+using SmartMoney.Domain.Enums;
 
-namespace SmartMoney.Application.Abstractions.Persistence
+namespace SmartMoney.Application.Abstractions.Persistence;
+
+public interface IRoleRepository
 {
-    public class IRoleRepository
-    {
-    }
+    Task<Role?> GetByNameAsync(
+        RoleType roleType,
+        CancellationToken cancellationToken = default);
 }

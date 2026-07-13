@@ -9,8 +9,7 @@
   <ItemGroup>
     <Folder Include="Authentication\" />
     <Folder Include="Persistence\Migrations\" />
-    <Folder Include="Services\" />
-    <Folder Include="Repositories\" />
+    <Folder Include="Persistence\Services\" />
   </ItemGroup>
 
   <ItemGroup>

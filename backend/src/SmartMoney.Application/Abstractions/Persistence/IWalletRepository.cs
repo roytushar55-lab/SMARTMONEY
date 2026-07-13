@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using SmartMoney.Domain.Entities;
 
-namespace SmartMoney.Application.Abstractions.Persistence
+namespace SmartMoney.Application.Abstractions.Persistence;
+
+public interface IWalletRepository
 {
-    public class IWalletRepository
-    {
-    }
+    Task AddAsync(
+        Wallet wallet,
+        CancellationToken cancellationToken = default);
 }

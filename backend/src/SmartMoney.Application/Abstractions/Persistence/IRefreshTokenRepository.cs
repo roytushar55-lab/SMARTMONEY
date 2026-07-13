@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using SmartMoney.Domain.Entities;
 
-namespace SmartMoney.Application.Abstractions.Persistence
+namespace SmartMoney.Application.Abstractions.Persistence;
+
+public interface IRefreshTokenRepository
 {
-    public class IRefreshTokenRepository
-    {
-    }
+    Task AddAsync(
+        RefreshToken refreshToken,
+        CancellationToken cancellationToken = default);
 }

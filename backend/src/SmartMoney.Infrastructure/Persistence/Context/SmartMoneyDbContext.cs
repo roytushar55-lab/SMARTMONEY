@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SmartMoney.Domain.Entities;
 
-namespace SmartMoney.Infrastructure.Persistence;
+namespace SmartMoney.Infrastructure.Persistence.Context;
 
 public sealed class SmartMoneyDbContext : DbContext
 {

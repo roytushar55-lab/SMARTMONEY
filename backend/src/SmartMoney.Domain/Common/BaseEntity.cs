@@ -8,7 +8,11 @@ public abstract class BaseEntity
 
     public DateTime? UpdatedAt { get; protected set; }
 
-    public void MarkAsUpdated()
+    protected BaseEntity()
+    {
+    }
+
+    protected void MarkAsUpdated()
     {
         UpdatedAt = DateTime.UtcNow;
     }
