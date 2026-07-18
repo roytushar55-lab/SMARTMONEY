@@ -1,4 +1,6 @@
 using SmartMoney.Infrastructure.DependencyInjection;
+using SmartMoney.Infrastructure.Persistence.Context;
+using SmartMoney.Infrastructure.Persistence.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,13 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<SmartMoneyDbContext>();
+
+    await RoleSeeder.SeedAsync(context);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
