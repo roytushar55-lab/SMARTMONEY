@@ -21,6 +21,8 @@ public sealed class SmartMoneyDbContext : DbContext, IUnitOfWork
     public DbSet<Cashback> Cashbacks => Set<Cashback>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<EmailVerificationOtp> EmailVerificationOtps
+    => Set<EmailVerificationOtp>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

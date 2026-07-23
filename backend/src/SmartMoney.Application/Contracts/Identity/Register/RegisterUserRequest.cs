@@ -1,14 +1,26 @@
-﻿namespace SmartMoney.Application.Contracts.Identity.Register;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace SmartMoney.Api.Features.Identity.Register;
 
 public sealed class RegisterUserRequest
 {
-    public string FullName { get; set; } = string.Empty;
+    [Required]
+    [StringLength(100, MinimumLength = 2)]
+    public string FullName { get; init; } = string.Empty;
 
-    public string Email { get; set; } = string.Empty;
+    [Required]
+    [EmailAddress]
+    [StringLength(254)]
+    public string Email { get; init; } = string.Empty;
 
-    public string PhoneNumber { get; set; } = string.Empty;
+    [Required]
+    [StringLength(15, MinimumLength = 10)]
+    public string PhoneNumber { get; init; } = string.Empty;
 
-    public string Password { get; set; } = string.Empty;
+    [Required]
+    [StringLength(128, MinimumLength = 8)]
+    public string Password { get; init; } = string.Empty;
 
-    public string? ReferralCode { get; set; }
+    [StringLength(50)]
+    public string? ReferralCode { get; init; }
 }

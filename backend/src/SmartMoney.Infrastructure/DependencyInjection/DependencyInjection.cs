@@ -31,14 +31,17 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IWalletRepository, WalletRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-        
-        
+        services.AddScoped<IEmailVerificationOtpRepository,EmailVerificationOtpRepository>();
 
         services.AddScoped<IUnitOfWork>(serviceProvider =>
             serviceProvider.GetRequiredService<SmartMoneyDbContext>());
 
         // Password hashing
+        // Authentication services
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<IOtpGenerator, SecureOtpGenerator>();
+        services.AddSingleton<IEmailOtpSender, ConsoleEmailOtpSender>();
+        services.AddSingleton<IOtpHasher, SecureOtpHasher>();
 
         // Read JWT settings
         JwtOptions jwtOptions =
