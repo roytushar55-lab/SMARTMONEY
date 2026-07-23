@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SmartMoney.Infrastructure.Persistence.Context;
@@ -11,9 +12,11 @@ using SmartMoney.Infrastructure.Persistence.Context;
 namespace SmartMoney.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SmartMoneyDbContext))]
-    partial class SmartMoneyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260722171934_AddEmailVerificationOtps")]
+    partial class AddEmailVerificationOtps
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
