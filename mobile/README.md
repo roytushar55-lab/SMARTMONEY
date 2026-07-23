@@ -1,3 +1,0 @@
-# Mobile
-
-Flutter Android Application
