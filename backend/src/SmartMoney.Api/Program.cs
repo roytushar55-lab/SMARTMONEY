@@ -12,7 +12,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Add services to the container.
 // Framework Services
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+//builder.Services.AddOpenApi();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
