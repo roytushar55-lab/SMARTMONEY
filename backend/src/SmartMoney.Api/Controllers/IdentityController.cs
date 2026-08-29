@@ -16,6 +16,8 @@ using SmartMoney.Application.Contracts.Identity.ForgotPassword;
 using SmartMoney.Application.Features.Identity.ForgotPassword;
 using SmartMoney.Application.Contracts.Identity.ResetPassword;
 using SmartMoney.Application.Features.Identity.ResetPassword;
+using SmartMoney.Application.Contracts.Identity.GoogleLogin;
+using SmartMoney.Application.Features.Identity.GoogleLogin;
 
 namespace SmartMoney.Api.Controllers;
 
@@ -36,6 +38,8 @@ public sealed class IdentityController : ControllerBase
     private readonly ICommandHandler<ForgotPasswordCommand,ForgotPasswordResponse> _forgotPasswordHandler;
 
     private readonly ICommandHandler<ResetPasswordCommand,ResetPasswordResponse> _resetPasswordHandler;
+
+    private readonly ICommandHandler<LoginWithGoogleCommand,LoginUserResponse> _loginWithGoogleHandler;
 
     public IdentityController(
         ICommandHandler<
@@ -58,7 +62,10 @@ public sealed class IdentityController : ControllerBase
             ForgotPasswordResponse> forgotPasswordHandler,
         ICommandHandler<
             ResetPasswordCommand,
-            ResetPasswordResponse> resetPasswordHandler)
+            ResetPasswordResponse> resetPasswordHandler,
+        ICommandHandler<
+            LoginWithGoogleCommand,
+            LoginUserResponse> loginWithGoogleHandler)
     {
         _registerUserHandler = registerUserHandler;
         _loginUserHandler = loginUserHandler;
@@ -67,6 +74,7 @@ public sealed class IdentityController : ControllerBase
         _refreshTokenHandler = refreshTokenHandler;
         _forgotPasswordHandler = forgotPasswordHandler;
         _resetPasswordHandler = resetPasswordHandler;
+        _loginWithGoogleHandler = loginWithGoogleHandler;
     }
 
     [AllowAnonymous]
@@ -124,6 +132,40 @@ public sealed class IdentityController : ControllerBase
         {
             LoginUserResponse response =
                 await _loginUserHandler.HandleAsync(
+                    command,
+                    cancellationToken);
+
+            return Ok(response);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new
+            {
+                message = exception.Message
+            });
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Unauthorized(new
+            {
+                message = exception.Message
+            });
+        }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("google-login")]
+    [ProducesResponseType(typeof(LoginUserResponse),StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request,CancellationToken cancellationToken)
+    {
+        var command = new LoginWithGoogleCommand(request.IdToken);
+
+        try
+        {
+            LoginUserResponse response =
+                await _loginWithGoogleHandler.HandleAsync(
                     command,
                     cancellationToken);
 

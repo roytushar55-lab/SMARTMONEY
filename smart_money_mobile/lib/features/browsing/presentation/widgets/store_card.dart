@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/accent_palette.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/widgets/network_image_with_fallback.dart';
 import '../../data/models/store_list_item.dart';
 
@@ -15,6 +15,7 @@ class StoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final shortDescription = store.shortDescription?.trim() ?? '';
     final hasDescription = shortDescription.isNotEmpty;
     final cashback = store.defaultCashbackText?.trim() ?? '';
@@ -29,10 +30,16 @@ class StoreCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.82),
+          color: colors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.70)),
-          boxShadow: [AppColors.cardShadow],
+          border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.10),
+              blurRadius: 32,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,8 +57,8 @@ class StoreCard extends StatelessWidget {
                           store.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textDark,
+                          style: TextStyle(
+                            color: colors.textPrimary,
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
                           ),
@@ -59,7 +66,7 @@ class StoreCard extends StatelessWidget {
                       ),
                       if (store.isFeatured) ...[
                         const SizedBox(width: 6),
-                        const _FeaturedBadge(),
+                        _FeaturedBadge(colors: colors),
                       ],
                     ],
                   ),
@@ -69,8 +76,8 @@ class StoreCard extends StatelessWidget {
                       shortDescription,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSoft,
+                      style: TextStyle(
+                        color: colors.textMuted,
                         fontSize: 12,
                         height: 1.3,
                         fontWeight: FontWeight.w500,
@@ -79,15 +86,15 @@ class StoreCard extends StatelessWidget {
                   ],
                   if (hasCashback) ...[
                     const SizedBox(height: 9),
-                    _CashbackBadge(text: cashback),
+                    _CashbackBadge(text: cashback, colors: colors),
                   ],
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.textSoft,
+              color: colors.textMuted,
               size: 22,
             ),
           ],
@@ -98,25 +105,27 @@ class StoreCard extends StatelessWidget {
 }
 
 class _FeaturedBadge extends StatelessWidget {
-  const _FeaturedBadge();
+  const _FeaturedBadge({required this.colors});
+
+  final SmColors colors;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.14),
+        color: colors.warning.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.star_rounded, color: AppColors.warning, size: 12),
-          SizedBox(width: 3),
+        children: [
+          Icon(Icons.star_rounded, color: colors.warning, size: 12),
+          const SizedBox(width: 3),
           Text(
             'Featured',
             style: TextStyle(
-              color: AppColors.warning,
+              color: colors.warning,
               fontSize: 10,
               fontWeight: FontWeight.w900,
             ),
@@ -145,6 +154,8 @@ class _StoreLogo extends StatelessWidget {
       width: 54,
       height: 54,
       decoration: BoxDecoration(
+        // Brand logo tiles stay white regardless of theme — most store logos
+        // are authored on a light/transparent background.
         color: hasLogo ? Colors.white : accent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: accent.withValues(alpha: 0.18)),
@@ -178,16 +189,17 @@ class _StoreLogo extends StatelessWidget {
 
 /// Bold, solid cashback badge (CashKaro-style emphasis on the rate).
 class _CashbackBadge extends StatelessWidget {
-  const _CashbackBadge({required this.text});
+  const _CashbackBadge({required this.text, required this.colors});
 
   final String text;
+  final SmColors colors;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.success,
+        color: colors.success,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

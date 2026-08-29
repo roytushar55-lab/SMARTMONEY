@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
+import '../../../../core/theme/sm_colors.dart';
+import '../../../../core/theme/sm_motion.dart';
+import '../../../../core/theme/sm_radius.dart';
+import '../../../../core/theme/sm_spacing.dart';
+import '../../../../core/widgets/fade_slide_in.dart';
 import '../../data/models/forgot_password_request.dart';
 import '../../data/services/auth_api_service.dart';
 
@@ -15,11 +20,6 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  static const _purple = Color(0xFF6334D8);
-  static const _green = Color(0xFF16A765);
-  static const _darkText = Color(0xFF172033);
-  static const _mutedText = Color(0xFF687086);
-
   final _formKey = GlobalKey<FormState>();
   final _authApiService = AuthApiService();
   final _emailController = TextEditingController();
@@ -92,166 +92,172 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   InputDecoration _inputDecoration({
+    required SmColors colors,
     required String hintText,
     required IconData icon,
   }) {
     return InputDecoration(
       hintText: hintText,
-      prefixIcon: Icon(icon, color: _green),
+      prefixIcon: Icon(icon, color: colors.success),
       filled: true,
-      fillColor: const Color(0xFFFCFCFF),
-      hintStyle: const TextStyle(color: Color(0xFF8A90A2)),
+      fillColor: colors.surface,
+      hintStyle: TextStyle(color: colors.textMuted),
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: Color(0xFFE8E4F2)),
+        borderRadius: BorderRadius.circular(SmRadius.cardLarge - 10),
+        borderSide: BorderSide(color: colors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: _green, width: 1.6),
+        borderRadius: BorderRadius.circular(SmRadius.cardLarge - 10),
+        borderSide: BorderSide(color: colors.success, width: 1.6),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: Colors.redAccent),
+        borderRadius: BorderRadius.circular(SmRadius.cardLarge - 10),
+        borderSide: BorderSide(color: colors.danger),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+        borderRadius: BorderRadius.circular(SmRadius.cardLarge - 10),
+        borderSide: BorderSide(color: colors.danger, width: 1.5),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: colors.bgPrimary,
       body: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF1EAFF), Color(0xFFFEFCFF), Color(0xFFF0FFF7)],
-            stops: [0.0, 0.52, 1.0],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: colors.backgroundGradient),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+            padding: const EdgeInsets.symmetric(
+              horizontal: SmSpacing.lg,
+              vertical: SmSpacing.xl,
+            ),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(
-                              Icons.arrow_back_rounded,
-                              color: _darkText,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: 64,
-                        height: 64,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _purple.withValues(alpha: 0.10),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.lock_reset_rounded,
-                          color: _purple,
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Forgot Password?',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: _darkText,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Enter the email linked to your account and '
-                        'we will send you a code to reset your password.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          height: 1.45,
-                          color: _mutedText,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.94),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.70),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _purple.withValues(alpha: 0.10),
-                              blurRadius: 32,
-                              offset: const Offset(0, 14),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: FadeSlideIn(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
                           children: [
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.done,
-                              validator: _validateEmail,
-                              onFieldSubmitted: (_) => _submit(),
-                              decoration: _inputDecoration(
-                                hintText: 'Email',
-                                icon: Icons.email_outlined,
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: Icon(
+                                Icons.arrow_back_rounded,
+                                color: colors.textPrimary,
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            _SubmitButton(
-                              isLoading: _isLoading,
-                              label: 'Send Reset Code',
-                              onPressed: _isLoading ? null : _submit,
-                            ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 18),
-                      Center(
-                        child: TextButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () => Navigator.pushReplacementNamed(
-                                  context,
-                                  RouteNames.login,
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 64,
+                          height: 64,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: colors.primary.withValues(alpha: 0.10),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.lock_reset_rounded,
+                            color: colors.primary,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(height: SmSpacing.xl),
+                        Text(
+                          'Forgot Password?',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Enter the email linked to your account and '
+                          'we will send you a code to reset your password.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            height: 1.45,
+                            color: colors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: SmSpacing.xxl),
+                        Container(
+                          padding: const EdgeInsets.all(SmSpacing.lg),
+                          decoration: BoxDecoration(
+                            color: colors.surface.withValues(alpha: 0.94),
+                            borderRadius: BorderRadius.circular(
+                              SmRadius.cardLarge,
+                            ),
+                            border: Border.all(
+                              color: colors.border.withValues(alpha: 0.70),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.primary.withValues(alpha: 0.10),
+                                blurRadius: 32,
+                                offset: const Offset(0, 14),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.done,
+                                validator: _validateEmail,
+                                enabled: !_isLoading,
+                                onFieldSubmitted: (_) => _submit(),
+                                decoration: _inputDecoration(
+                                  colors: colors,
+                                  hintText: 'Email',
+                                  icon: Icons.email_outlined,
                                 ),
-                          child: const Text(
-                            'Back to log in',
-                            style: TextStyle(
-                              color: _purple,
-                              fontWeight: FontWeight.w800,
+                              ),
+                              const SizedBox(height: SmSpacing.lg),
+                              _SubmitButton(
+                                colors: colors,
+                                isLoading: _isLoading,
+                                label: 'Send Reset Code',
+                                onPressed: _isLoading ? null : _submit,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: SmSpacing.lg),
+                        Center(
+                          child: TextButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () => Navigator.pushReplacementNamed(
+                                    context,
+                                    RouteNames.login,
+                                  ),
+                            child: Text(
+                              'Back to log in',
+                              style: TextStyle(
+                                color: colors.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -263,69 +269,92 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 }
 
-class _SubmitButton extends StatelessWidget {
+class _SubmitButton extends StatefulWidget {
   const _SubmitButton({
+    required this.colors,
     required this.isLoading,
     required this.label,
     required this.onPressed,
   });
 
+  final SmColors colors;
   final bool isLoading;
   final String label;
   final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    final isEnabled = onPressed != null && !isLoading;
+  State<_SubmitButton> createState() => _SubmitButtonState();
+}
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: isEnabled
-              ? const [Color(0xFF17B765), Color(0xFF0C9F56)]
-              : const [Color(0xFF9ED7B8), Color(0xFF9ED7B8)],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: isEnabled
-            ? [
-                BoxShadow(
-                  color: const Color(0xFF10A85F).withValues(alpha: 0.30),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : const [],
-      ),
-      child: FilledButton(
-        onPressed: isEnabled ? onPressed : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          disabledBackgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          minimumSize: const Size.fromHeight(56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+class _SubmitButtonState extends State<_SubmitButton> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = widget.onPressed != null && !widget.isLoading;
+    final colors = widget.colors;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      cursor: isEnabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: AnimatedScale(
+        scale: isEnabled && _hovering ? 1.01 : 1.0,
+        duration: SmMotion.fast,
+        curve: SmMotion.standard,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: isEnabled
+                  ? [colors.success, colors.successHover]
+                  : [
+                      colors.success.withValues(alpha: 0.45),
+                      colors.success.withValues(alpha: 0.45),
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(SmRadius.button),
+            boxShadow: isEnabled
+                ? [
+                    BoxShadow(
+                      color: colors.success.withValues(alpha: 0.30),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : const [],
+          ),
+          child: FilledButton(
+            onPressed: isEnabled ? widget.onPressed : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              disabledBackgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size.fromHeight(56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(SmRadius.button),
+              ),
+            ),
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    widget.label,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
       ),
     );
   }

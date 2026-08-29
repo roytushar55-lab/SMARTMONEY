@@ -26,6 +26,7 @@ using SmartMoney.Application.Features.Cashbacks.ReverseCashback;
 using SmartMoney.Application.Features.Categories.GetCategories;
 using SmartMoney.Application.Features.Identity.ChangeUserRole;
 using SmartMoney.Application.Features.Identity.ForgotPassword;
+using SmartMoney.Application.Features.Identity.GoogleLogin;
 using SmartMoney.Application.Features.Identity.Login;
 using SmartMoney.Application.Features.Identity.RefreshToken;
 using SmartMoney.Application.Features.Identity.Register;
@@ -76,6 +77,10 @@ public static class ApplicationDependencyInjection
         services.AddScoped<ResetPasswordValidator>();
 
         services.AddScoped<ICommandHandler<ResetPasswordCommand, ResetPasswordResponse>,ResetPasswordCommandHandler>();
+
+        services.AddScoped<LoginWithGoogleValidator>();
+
+        services.AddScoped<ICommandHandler<LoginWithGoogleCommand, LoginUserResponse>,LoginWithGoogleCommandHandler>();
 
         services.AddScoped<IQueryHandler<GetCategoriesQuery,IReadOnlyList<CategoryListItemResponse>>,GetCategoriesQueryHandler>();
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../app/routes/route_names.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/utils/external_link.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -10,6 +9,7 @@ import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../../core/widgets/network_image_with_fallback.dart';
 import '../../../../core/widgets/view_state.dart';
+import '../../../../core/theme/sm_colors.dart';
 import '../../../affiliate/data/services/affiliate_api_service.dart';
 import '../../data/models/offer_details.dart';
 import '../../data/services/browsing_api_service.dart';
@@ -200,6 +200,7 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
   }
 
   Widget _buildContent(OfferDetails offer) {
+    final colors = SmColors.of(context);
     final shortDescription = offer.shortDescription?.trim() ?? '';
     final description = offer.description?.trim() ?? '';
     final terms = offer.termsAndConditions?.trim() ?? '';
@@ -218,8 +219,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
             child: NetworkImageWithFallback(
               url: offer.imageUrl,
               fallbackIcon: Icons.local_offer_outlined,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.10),
-              iconColor: AppColors.primary,
+              backgroundColor: colors.primary.withValues(alpha: 0.10),
+              iconColor: colors.primary,
               iconSize: 40,
             ),
           ),
@@ -236,17 +237,17 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
                 children: [
                   Text(
                     storeName.toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: colors.primary,
                       fontSize: 12,
                       letterSpacing: 0.4,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
-                    color: AppColors.primary,
+                    color: colors.primary,
                     size: 16,
                   ),
                 ],
@@ -256,8 +257,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
         const SizedBox(height: 6),
         Text(
           offer.title,
-          style: const TextStyle(
-            color: AppColors.textDark,
+          style: TextStyle(
+            color: colors.textPrimary,
             fontSize: 22,
             height: 1.2,
             fontWeight: FontWeight.w900,
@@ -267,8 +268,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
           const SizedBox(height: 8),
           Text(
             shortDescription,
-            style: const TextStyle(
-              color: AppColors.textMid,
+            style: TextStyle(
+              color: colors.textSecondary,
               fontSize: 14,
               height: 1.4,
               fontWeight: FontWeight.w500,
@@ -285,13 +286,13 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
                 _Pill(
                   icon: Icons.savings_outlined,
                   label: cashback,
-                  color: AppColors.success,
+                  color: colors.success,
                 ),
               if (offer.isFeatured)
                 _Pill(
                   icon: Icons.star_rounded,
                   label: 'Featured',
-                  color: AppColors.warning,
+                  color: colors.warning,
                 ),
             ],
           ),
@@ -304,17 +305,17 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.schedule_rounded,
-                color: AppColors.textSoft,
+                color: colors.textMuted,
                 size: 16,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   validity,
-                  style: const TextStyle(
-                    color: AppColors.textSoft,
+                  style: TextStyle(
+                    color: colors.textMuted,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -329,8 +330,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
           const SizedBox(height: 8),
           Text(
             description,
-            style: const TextStyle(
-              color: AppColors.textMid,
+            style: TextStyle(
+              color: colors.textSecondary,
               fontSize: 13,
               height: 1.5,
               fontWeight: FontWeight.w500,
@@ -343,8 +344,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen> {
           const SizedBox(height: 8),
           Text(
             terms,
-            style: const TextStyle(
-              color: AppColors.textSoft,
+            style: TextStyle(
+              color: colors.textMuted,
               fontSize: 12,
               height: 1.5,
               fontWeight: FontWeight.w500,
@@ -393,18 +394,20 @@ class _CouponBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: colors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.30)),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.30)),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.confirmation_number_outlined,
-            color: AppColors.primary,
+            color: colors.primary,
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -412,10 +415,10 @@ class _CouponBox extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Coupon code',
                   style: TextStyle(
-                    color: AppColors.textSoft,
+                    color: colors.textMuted,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -423,8 +426,8 @@ class _CouponBox extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   code,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontSize: 16,
                     letterSpacing: 0.5,
                     fontWeight: FontWeight.w900,
@@ -456,8 +459,8 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        color: AppColors.textDark,
+      style: TextStyle(
+        color: SmColors.of(context).textPrimary,
         fontSize: 17,
         fontWeight: FontWeight.w800,
       ),

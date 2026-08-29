@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/accent_palette.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/widgets/network_image_with_fallback.dart';
 import '../../data/models/category.dart';
 
@@ -26,6 +26,7 @@ class CategoryCircleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final accent = AccentPalette.forKey(
       category.slug.isNotEmpty ? category.slug : category.name,
     );
@@ -82,8 +83,8 @@ class CategoryCircleTile extends StatelessWidget {
               maxLines: 2,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textDark,
+              style: TextStyle(
+                color: colors.textPrimary,
                 fontSize: 12,
                 height: 1.2,
                 fontWeight: FontWeight.w700,

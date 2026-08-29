@@ -11,6 +11,8 @@ import '../../features/browsing/presentation/screens/offer_details_screen.dart';
 import '../../features/browsing/presentation/screens/offers_screen.dart';
 import '../../features/browsing/presentation/screens/store_details_screen.dart';
 import '../../features/browsing/presentation/screens/stores_screen.dart';
+import '../../features/cashback/data/models/cashback_item.dart';
+import '../../features/cashback/presentation/screens/cashback_details_screen.dart';
 import '../../features/shell/presentation/screens/main_shell.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import 'route_names.dart';
@@ -43,8 +45,8 @@ class AppRoutes {
         );
 
       case RouteNames.dashboard:
-        // Keyed so the drawer can switch tabs from pushed routes that sit
-        // above the shell rather than inside it.
+        // Keyed so pushed routes that sit above the shell (not inside it)
+        // can still switch its tabs.
         return MaterialPageRoute(
           builder: (_) => MainShell(key: MainShell.shellKey),
         );
@@ -89,6 +91,15 @@ class AppRoutes {
         }
         return MaterialPageRoute(
           builder: (_) => OfferDetailsScreen(offerSlug: slug),
+        );
+
+      case RouteNames.cashbackDetails:
+        final item = settings.arguments;
+        if (item is! CashbackItem) {
+          return _invalidArgumentsRoute(settings.name);
+        }
+        return MaterialPageRoute(
+          builder: (_) => CashbackDetailsScreen(item: item),
         );
 
       default:

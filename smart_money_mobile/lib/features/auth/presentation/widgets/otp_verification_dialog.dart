@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../data/models/verify_email_otp_request.dart';
 import '../../data/services/auth_api_service.dart';
@@ -164,6 +164,8 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       backgroundColor: Colors.transparent,
@@ -178,8 +180,12 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
             Container(
               width: 58,
               height: 58,
-              decoration: const BoxDecoration(
-                gradient: AppColors.primaryGradient,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [colors.primary, colors.primaryHover],
+                ),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -189,23 +195,23 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
+            Text(
               'Verify Account',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
+                color: colors.textPrimary,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'Enter the 6-digit code sent to\n${widget.email}',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 height: 1.45,
-                color: AppColors.textMid,
+                color: colors.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
@@ -223,15 +229,15 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                     textAlign: TextAlign.center,
                     maxLength: 1,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
+                      color: colors.textPrimary,
                     ),
                     decoration: InputDecoration(
                       counterText: '',
                       filled: true,
-                      fillColor: AppColors.inputFill,
+                      fillColor: colors.surfaceHover,
                       contentPadding: EdgeInsets.zero,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -239,10 +245,7 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: AppColors.primary,
-                          width: 2,
-                        ),
+                        borderSide: BorderSide(color: colors.primary, width: 2),
                       ),
                     ),
                     onChanged: (value) {
@@ -274,10 +277,10 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                 'Resend OTP in '
                 '${(_remainingSeconds ~/ 60).toString().padLeft(2, '0')}:'
                 '${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textMid,
+                  color: colors.textSecondary,
                 ),
               )
             else
@@ -289,11 +292,11 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text(
+                    : Text(
                         'Resend OTP',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                          color: colors.primary,
                         ),
                       ),
               ),

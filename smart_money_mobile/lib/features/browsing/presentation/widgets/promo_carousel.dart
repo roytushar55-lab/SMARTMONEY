@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/accent_palette.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/widgets/network_image_with_fallback.dart';
 import '../../data/models/offer_list_item.dart';
 
@@ -77,6 +77,8 @@ class _PromoCarouselState extends State<PromoCarousel> {
   Widget build(BuildContext context) {
     if (widget.offers.isEmpty) return const SizedBox.shrink();
 
+    final primary = SmColors.of(context).primary;
+
     return Column(
       children: [
         // Isolates the auto-advancing PageView so its animation frames do not
@@ -113,9 +115,7 @@ class _PromoCarouselState extends State<PromoCarousel> {
                 width: isActive ? 18 : 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: isActive
-                      ? AppColors.primary
-                      : AppColors.primary.withValues(alpha: 0.24),
+                  color: isActive ? primary : primary.withValues(alpha: 0.24),
                   borderRadius: BorderRadius.circular(999),
                 ),
               );

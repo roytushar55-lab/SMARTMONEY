@@ -98,6 +98,34 @@ class AuthApiService {
     return LoginResponse.fromJson(decodedBody);
   }
 
+  /// Exchanges a verified Google ID token for a SmartMoney session. Returns
+  /// the same [LoginResponse] shape a normal login does, so callers save
+  /// tokens and navigate exactly the same way regardless of sign-in method.
+  Future<LoginResponse> loginWithGoogle(String idToken) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/identity/google-login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': idToken}),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        _extractErrorMessage(
+          response,
+          "Google sign-in couldn't be completed. Please try again.",
+        ),
+      );
+    }
+
+    final decodedBody = jsonDecode(response.body);
+
+    if (decodedBody is! Map<String, dynamic>) {
+      throw const FormatException('Invalid Google login response.');
+    }
+
+    return LoginResponse.fromJson(decodedBody);
+  }
+
   Future<RefreshTokenResponse> refreshToken(RefreshTokenRequest request) async {
     final response = await _client.post(
       Uri.parse('$baseUrl/api/identity/refresh-token'),

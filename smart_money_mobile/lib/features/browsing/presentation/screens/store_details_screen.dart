@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/utils/external_link.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -9,6 +8,7 @@ import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../../core/widgets/network_image_with_fallback.dart';
 import '../../../../core/widgets/view_state.dart';
+import '../../../../core/theme/sm_colors.dart';
 import '../../../affiliate/data/services/affiliate_api_service.dart';
 import '../../data/models/offer_list_item.dart';
 import '../../data/models/store_details.dart';
@@ -247,6 +247,8 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen> {
   }
 
   Widget _buildOffersSection() {
+    final colors = SmColors.of(context);
+
     switch (_offersState) {
       case ViewState.initial:
       case ViewState.loading:
@@ -257,16 +259,16 @@ class _StoreDetailsScreenState extends State<StoreDetailsScreen> {
       case ViewState.error:
         return _InlineNotice(
           icon: Icons.cloud_off_rounded,
-          iconColor: AppColors.danger,
+          iconColor: colors.danger,
           title: 'Could not load offers',
           message: _offersError,
           actionLabel: 'Try again',
           onAction: _loadOffers,
         );
       case ViewState.empty:
-        return const _InlineNotice(
+        return _InlineNotice(
           icon: Icons.local_offer_outlined,
-          iconColor: AppColors.primary,
+          iconColor: colors.primary,
           title: 'No active offers',
           message: 'This store has no active offers right now.',
         );
@@ -296,6 +298,7 @@ class _StoreHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final shortDescription = details.shortDescription?.trim() ?? '';
     final description = details.description?.trim() ?? '';
     final cashback = details.defaultCashbackText?.trim() ?? '';
@@ -303,10 +306,16 @@ class _StoreHeader extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.82),
+        color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.70)),
-        boxShadow: [AppColors.cardShadow],
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.10),
+            blurRadius: 32,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -317,8 +326,8 @@ class _StoreHeader extends StatelessWidget {
             child: NetworkImageWithFallback(
               url: details.bannerUrl,
               fallbackIcon: Icons.image_outlined,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.10),
-              iconColor: AppColors.primary,
+              backgroundColor: colors.primary.withValues(alpha: 0.10),
+              iconColor: colors.primary,
               iconSize: 34,
             ),
           ),
@@ -339,7 +348,7 @@ class _StoreHeader extends StatelessWidget {
                         fit: BoxFit.contain,
                         fallbackIcon: Icons.storefront_outlined,
                         backgroundColor: Colors.white,
-                        iconColor: AppColors.primary,
+                        iconColor: colors.primary,
                         iconSize: 26,
                       ),
                     ),
@@ -350,8 +359,8 @@ class _StoreHeader extends StatelessWidget {
                         children: [
                           Text(
                             details.name,
-                            style: const TextStyle(
-                              color: AppColors.textDark,
+                            style: TextStyle(
+                              color: colors.textPrimary,
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                             ),
@@ -360,8 +369,8 @@ class _StoreHeader extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               shortDescription,
-                              style: const TextStyle(
-                                color: AppColors.textMid,
+                              style: TextStyle(
+                                color: colors.textSecondary,
                                 fontSize: 13,
                                 height: 1.35,
                                 fontWeight: FontWeight.w500,
@@ -379,17 +388,17 @@ class _StoreHeader extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.10),
+                      color: colors.success.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: AppColors.success.withValues(alpha: 0.28),
+                        color: colors.success.withValues(alpha: 0.28),
                       ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.savings_rounded,
-                          color: AppColors.success,
+                          color: colors.success,
                           size: 22,
                         ),
                         const SizedBox(width: 12),
@@ -397,10 +406,10 @@ class _StoreHeader extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Cashback rate',
                                 style: TextStyle(
-                                  color: AppColors.textSoft,
+                                  color: colors.textMuted,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -408,8 +417,8 @@ class _StoreHeader extends StatelessWidget {
                               const SizedBox(height: 2),
                               Text(
                                 cashback,
-                                style: const TextStyle(
-                                  color: AppColors.success,
+                                style: TextStyle(
+                                  color: colors.success,
                                   fontSize: 17,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -426,7 +435,7 @@ class _StoreHeader extends StatelessWidget {
                   _Pill(
                     icon: Icons.star_rounded,
                     label: 'Featured store',
-                    color: AppColors.warning,
+                    color: colors.warning,
                   ),
                 ],
                 // Only offered when the store actually has a launchable site.
@@ -445,8 +454,8 @@ class _StoreHeader extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     description,
-                    style: const TextStyle(
-                      color: AppColors.textMid,
+                    style: TextStyle(
+                      color: colors.textSecondary,
                       fontSize: 13,
                       height: 1.5,
                       fontWeight: FontWeight.w500,
@@ -457,9 +466,9 @@ class _StoreHeader extends StatelessWidget {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.language_rounded,
-                        color: AppColors.textSoft,
+                        color: colors.textMuted,
                         size: 16,
                       ),
                       const SizedBox(width: 8),
@@ -468,8 +477,8 @@ class _StoreHeader extends StatelessWidget {
                           website,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textSoft,
+                          style: TextStyle(
+                            color: colors.textMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -496,8 +505,8 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        color: AppColors.textDark,
+      style: TextStyle(
+        color: SmColors.of(context).textPrimary,
         fontSize: 17,
         fontWeight: FontWeight.w800,
       ),
@@ -558,13 +567,15 @@ class _InlineNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.68),
+        color: colors.surface.withValues(alpha: 0.68),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.60)),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         children: [
@@ -573,8 +584,8 @@ class _InlineNotice extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textDark,
+            style: TextStyle(
+              color: colors.textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w800,
             ),
@@ -583,8 +594,8 @@ class _InlineNotice extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textMid,
+            style: TextStyle(
+              color: colors.textSecondary,
               fontSize: 12,
               height: 1.4,
               fontWeight: FontWeight.w500,

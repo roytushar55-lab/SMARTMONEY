@@ -76,10 +76,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
-    Navigator.pushReplacementNamed(
-      context,
-      hasValidSession ? RouteNames.dashboard : RouteNames.login,
-    );
+    if (hasValidSession) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        RouteNames.dashboard,
+        (route) => false,
+      );
+    } else {
+      Navigator.pushReplacementNamed(context, RouteNames.login);
+    }
   }
 
   @override

@@ -111,6 +111,19 @@ public static class DependencyInjection
 
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
+        // Google Sign-In: verifies ID tokens via Google's tokeninfo endpoint.
+        // ClientId is intentionally not validated at startup like the JWT
+        // options above — an empty value just means Google sign-in is
+        // unconfigured, and GoogleIdTokenVerifier reports that per-request
+        // instead of preventing the rest of the API from starting.
+        services.Configure<GoogleAuthOptions>(
+            configuration.GetSection(GoogleAuthOptions.SectionName));
+
+        services.AddHttpClient<IGoogleIdTokenVerifier, GoogleIdTokenVerifier>(client =>
+        {
+            client.BaseAddress = new Uri("https://oauth2.googleapis.com/");
+        });
+
         // JWT authentication
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

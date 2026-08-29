@@ -24,8 +24,14 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .IsUnique();
 
         builder.Property(x => x.PasswordHash)
-            .HasMaxLength(500)
-            .IsRequired();
+            .HasMaxLength(500);
+
+        builder.Property(x => x.GoogleId)
+            .HasMaxLength(255);
+
+        builder.HasIndex(x => x.GoogleId)
+            .IsUnique()
+            .HasFilter("\"GoogleId\" IS NOT NULL");
 
         builder.Property(x => x.ProfileImageUrl)
             .HasMaxLength(500);

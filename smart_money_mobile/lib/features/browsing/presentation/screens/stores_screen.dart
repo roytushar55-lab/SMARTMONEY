@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/widgets/app_drawer.dart';
 import '../../../../core/widgets/empty_view.dart';
-import '../../../../core/widgets/menu_lines_icon.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../../../core/widgets/loading_view.dart';
@@ -82,13 +80,7 @@ class _StoresScreenState extends State<StoresScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The drawer replaces the old back-to-dashboard arrow: it reaches the
-      // dashboard and every other section, not just the way back.
-      drawer: const AppDrawer(current: AppDrawerItem.stores),
-      appBar: AppBar(
-        title: const Text('Stores'),
-        leading: const DrawerMenuButton(),
-      ),
+      appBar: AppBar(title: const Text('Stores')),
       body: LoginDemoBackground(
         child: SafeArea(top: false, child: _buildBody()),
       ),

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/sm_colors.dart';
 
 /// Circular profile picture that degrades to gradient-backed initials.
 ///
-/// Shared because the drawer and the dashboard topbar both show it, and the
-/// drawer is now hosted by several screens.
+/// Shared across the dashboard topbar and the profile screen.
 class ProfileAvatar extends StatelessWidget {
   const ProfileAvatar({
     super.key,
@@ -23,13 +22,18 @@ class ProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasImage = imageUrl.trim().isNotEmpty;
+    final colors = SmColors.of(context);
 
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        gradient: AppColors.primaryGradient,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.primary, colors.primaryHover],
+        ),
         shape: BoxShape.circle,
       ),
       clipBehavior: Clip.antiAlias,

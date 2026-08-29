@@ -16,6 +16,10 @@ public interface IUserRepository
         string email,
         CancellationToken cancellationToken = default);
 
+    Task<User?> GetByGoogleIdAsync(
+        string googleId,
+        CancellationToken cancellationToken = default);
+
     Task<User?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);

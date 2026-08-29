@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/sm_colors.dart';
 
 /// A row of single-digit boxes for entering a numeric OTP.
 ///
@@ -78,6 +78,8 @@ class OtpCodeInputState extends State<OtpCodeInput> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(
@@ -92,15 +94,15 @@ class OtpCodeInputState extends State<OtpCodeInput> {
             textAlign: TextAlign.center,
             maxLength: 1,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
+              color: colors.textPrimary,
             ),
             decoration: InputDecoration(
               counterText: '',
               filled: true,
-              fillColor: AppColors.inputFill,
+              fillColor: colors.surfaceHover,
               contentPadding: EdgeInsets.zero,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -108,10 +110,7 @@ class OtpCodeInputState extends State<OtpCodeInput> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: colors.primary, width: 2),
               ),
             ),
             onChanged: (value) => _handleChanged(index, value),

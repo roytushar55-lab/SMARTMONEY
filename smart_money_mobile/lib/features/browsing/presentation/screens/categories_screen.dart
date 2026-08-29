@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/widgets/app_drawer.dart';
 import '../../../../core/widgets/empty_view.dart';
-import '../../../../core/widgets/menu_lines_icon.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../../../core/widgets/loading_view.dart';
@@ -83,11 +81,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const AppDrawer(current: AppDrawerItem.categories),
-      appBar: AppBar(
-        title: const Text('Categories'),
-        leading: const DrawerMenuButton(),
-      ),
+      appBar: AppBar(title: const Text('Categories')),
       body: LoginDemoBackground(
         child: SafeArea(top: false, child: _buildBody()),
       ),

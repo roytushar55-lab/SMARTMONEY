@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../app/routes/route_names.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/theme/app_theme_mode.dart';
+import '../../../../core/theme/sm_colors.dart';
+import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../../auth/data/services/token_storage_service.dart';
 import '../../data/models/profile_response.dart';
@@ -18,28 +20,6 @@ class ProfileSetupScreen extends StatefulWidget {
 }
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
-  static const _danger = Color(0xFFEF4444);
-  static const _cashbackMetrics = [
-    {
-      'label': 'Available',
-      'value': 'Rs 3,450',
-      'icon': Icons.account_balance_wallet_outlined,
-      'color': AppColors.primary,
-    },
-    {
-      'label': 'Pending',
-      'value': 'Rs 780',
-      'icon': Icons.schedule_rounded,
-      'color': AppColors.warning,
-    },
-    {
-      'label': 'Lifetime',
-      'value': 'Rs 12,840',
-      'icon': Icons.trending_up_rounded,
-      'color': AppColors.success,
-    },
-  ];
-
   final _profileApiService = ProfileApiService();
   final _tokenStorageService = const TokenStorageService();
   final _nameController = TextEditingController();
@@ -324,13 +304,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   InputDecoration _inputDecoration({
+    required BuildContext context,
     required String hintText,
     required IconData icon,
     Widget? suffixIcon,
   }) {
     return InputDecoration(
       hintText: hintText,
-      prefixIcon: Icon(icon, color: AppColors.primary),
+      prefixIcon: Icon(icon, color: SmColors.of(context).primary),
       suffixIcon: suffixIcon,
     );
   }
@@ -338,13 +319,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final profile = _profile;
+    final colors = SmColors.of(context);
 
     return Scaffold(
       body: LoginDemoBackground(
         child: SafeArea(
           child: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
+              ? Center(
+                  child: CircularProgressIndicator(color: colors.primary),
                 )
               : SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -358,11 +340,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           const SizedBox(height: 14),
                           _buildHeader(profile),
                           const SizedBox(height: 16),
-                          _buildCashbackSummary(),
-                          const SizedBox(height: 16),
                           _buildAccountCard(profile),
                           const SizedBox(height: 16),
                           _buildSecurityCard(),
+                          const SizedBox(height: 16),
+                          _buildAppearanceCard(),
                           const SizedBox(height: 16),
                           _buildSupportCard(),
                           const SizedBox(height: 16),
@@ -398,15 +380,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           tooltip: 'Back to dashboard',
           style: IconButton.styleFrom(
             backgroundColor: Colors.white.withValues(alpha: 0.74),
-            foregroundColor: AppColors.primary,
+            foregroundColor: SmColors.of(context).primary,
           ),
         ),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Text(
             'Profile',
             style: TextStyle(
-              color: AppColors.textDark,
+              color: SmColors.of(context).textPrimary,
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
@@ -417,6 +399,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Widget _buildHeader(ProfileResponse? profile) {
+    final colors = SmColors.of(context);
     final fullName = profile?.fullName ?? 'Profile';
     final email = profile?.email ?? '';
     final profilePhotoUrl = _profileImageUrl(profile?.profileImageUrl ?? '');
@@ -427,9 +410,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradientExtended,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.primary, colors.primaryHover],
+        ),
         borderRadius: BorderRadius.circular(26),
-        boxShadow: [AppColors.buttonShadow],
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -497,60 +490,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
-  Widget _buildCashbackSummary() {
-    return LoginDemoGlassCard(
-      borderRadius: 22,
-      // Blur disabled: these cards live inside the scroll view.
-      enableBlur: false,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _SectionTitle(
-            title: 'Cashback Summary',
-            subtitle: 'Your SmartMoney rewards at a glance',
-          ),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 560;
-              final tiles = _cashbackMetrics
-                  .map(
-                    (metric) => _MetricTile(
-                      label: metric['label']! as String,
-                      value: metric['value']! as String,
-                      icon: metric['icon']! as IconData,
-                      color: metric['color']! as Color,
-                    ),
-                  )
-                  .toList();
-
-              if (isCompact) {
-                return Column(
-                  children: [
-                    for (var index = 0; index < tiles.length; index++) ...[
-                      tiles[index],
-                      if (index != tiles.length - 1) const SizedBox(height: 10),
-                    ],
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  for (var index = 0; index < tiles.length; index++) ...[
-                    Expanded(child: tiles[index]),
-                    if (index != tiles.length - 1) const SizedBox(width: 12),
-                  ],
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildAccountCard(ProfileResponse? profile) {
     return LoginDemoGlassCard(
       borderRadius: 22,
@@ -587,6 +526,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             controller: _nameController,
             textCapitalization: TextCapitalization.words,
             decoration: _inputDecoration(
+              context: context,
               hintText: 'Name',
               icon: Icons.badge_outlined,
             ),
@@ -605,6 +545,60 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Widget _buildSecurityCard() {
+    return Builder(
+      builder: (context) {
+        final colors = SmColors.of(context);
+        return LoginDemoGlassCard(
+          borderRadius: 22,
+          // Blur disabled: these cards live inside the scroll view.
+          enableBlur: false,
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const _SectionTitle(
+                title: 'Security',
+                subtitle: 'Manage access to your SmartMoney account',
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: _passwordController,
+                obscureText: _isPasswordHidden,
+                decoration: _inputDecoration(
+                  context: context,
+                  hintText: 'New Password',
+                  icon: Icons.lock_outline,
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordHidden = !_isPasswordHidden;
+                      });
+                    },
+                    icon: Icon(
+                      _isPasswordHidden
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: colors.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              LoginDemoGradientButton(
+                label: 'Update Password',
+                icon: Icons.lock_reset_rounded,
+                isLoading: _isChangingPassword,
+                height: 48,
+                onPressed: _isChangingPassword ? null : _changePassword,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAppearanceCard() {
     return LoginDemoGlassCard(
       borderRadius: 22,
       // Blur disabled: these cards live inside the scroll view.
@@ -614,38 +608,72 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _SectionTitle(
-            title: 'Security',
-            subtitle: 'Manage access to your SmartMoney account',
+            title: 'Appearance',
+            subtitle: 'Choose how SmartMoney looks on this device',
           ),
           const SizedBox(height: 18),
-          TextField(
-            controller: _passwordController,
-            obscureText: _isPasswordHidden,
-            decoration: _inputDecoration(
-              hintText: 'New Password',
-              icon: Icons.lock_outline,
-              suffixIcon: IconButton(
-                onPressed: () {
-                  setState(() {
-                    _isPasswordHidden = !_isPasswordHidden;
-                  });
-                },
-                icon: Icon(
-                  _isPasswordHidden
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: AppColors.textSoft,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          LoginDemoGradientButton(
-            label: 'Update Password',
-            icon: Icons.lock_reset_rounded,
-            isLoading: _isChangingPassword,
-            height: 48,
-            onPressed: _isChangingPassword ? null : _changePassword,
+          ListenableBuilder(
+            listenable: ThemeController.instance,
+            builder: (context, _) {
+              final colors = SmColors.of(context);
+              final isDark =
+                  ThemeController.instance.mode == AppThemeMode.dark;
+
+              return Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      isDark
+                          ? Icons.dark_mode_rounded
+                          : Icons.light_mode_rounded,
+                      color: colors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Dark Mode',
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isDark ? 'On' : 'Off',
+                          style: TextStyle(
+                            color: colors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: isDark,
+                    activeTrackColor: colors.primary,
+                    onChanged: (value) {
+                      ThemeController.instance.setMode(
+                        value ? AppThemeMode.dark : AppThemeMode.light,
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -692,6 +720,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Widget _buildLogoutCard() {
+    final danger = SmColors.of(context).danger;
+
     return LoginDemoGlassCard(
       borderRadius: 22,
       // Blur disabled: these cards live inside the scroll view.
@@ -700,8 +730,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       child: OutlinedButton.icon(
         onPressed: _logout,
         style: OutlinedButton.styleFrom(
-          foregroundColor: _danger,
-          side: BorderSide(color: _danger.withValues(alpha: 0.42)),
+          foregroundColor: danger,
+          side: BorderSide(color: danger.withValues(alpha: 0.42)),
           minimumSize: const Size.fromHeight(50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -725,13 +755,15 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: AppColors.textDark,
+          style: TextStyle(
+            color: colors.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w800,
           ),
@@ -739,8 +771,8 @@ class _SectionTitle extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: const TextStyle(
-            color: AppColors.textSoft,
+          style: TextStyle(
+            color: colors.textMuted,
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),
@@ -784,75 +816,6 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.12)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textSoft,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _InfoRow extends StatelessWidget {
   const _InfoRow({
     required this.label,
@@ -866,6 +829,7 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final displayValue = value.isEmpty ? 'Not available' : value;
 
     return Padding(
@@ -877,10 +841,10 @@ class _InfoRow extends StatelessWidget {
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.10),
+              color: colors.primary.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
+            child: Icon(icon, color: colors.primary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -889,8 +853,8 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: AppColors.textSoft,
+                  style: TextStyle(
+                    color: colors.textMuted,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -900,8 +864,8 @@ class _InfoRow extends StatelessWidget {
                   displayValue,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
@@ -930,6 +894,8 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
@@ -942,10 +908,10 @@ class _ActionRow extends StatelessWidget {
               height: 40,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.10),
+                color: colors.primary.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
+              child: Icon(icon, color: colors.primary, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -954,8 +920,8 @@ class _ActionRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: AppColors.textDark,
+                    style: TextStyle(
+                      color: colors.textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
@@ -965,8 +931,8 @@ class _ActionRow extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSoft,
+                    style: TextStyle(
+                      color: colors.textMuted,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -975,9 +941,9 @@ class _ActionRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.textSoft,
+              color: colors.textMuted,
               size: 22,
             ),
           ],
@@ -995,7 +961,7 @@ class _InfoDivider extends StatelessWidget {
     return Divider(
       height: 22,
       thickness: 1,
-      color: AppColors.inputBorder.withValues(alpha: 0.72),
+      color: SmColors.of(context).border,
     );
   }
 }
@@ -1017,6 +983,7 @@ class _ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final hasImage = imageUrl.trim().isNotEmpty;
 
     return SizedBox(
@@ -1078,24 +1045,24 @@ class _ProfileAvatar extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.textDark.withValues(alpha: 0.16),
+                          color: colors.shadow.withValues(alpha: 0.16),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: isUploading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 12,
                             height: 12,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.primary,
+                              color: colors.primary,
                             ),
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.photo_camera_outlined,
-                            color: AppColors.primary,
+                            color: colors.primary,
                             size: 15,
                           ),
                   ),

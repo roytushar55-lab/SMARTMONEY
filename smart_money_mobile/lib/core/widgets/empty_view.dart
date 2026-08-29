@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/sm_colors.dart';
 
 /// Neutral "nothing here yet" state used for empty API results.
 class EmptyView extends StatelessWidget {
@@ -19,6 +19,8 @@ class EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -30,17 +32,17 @@ class EmptyView extends StatelessWidget {
               height: 64,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.10),
+                color: colors.primary.withValues(alpha: 0.10),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppColors.primary, size: 30),
+              child: Icon(icon, color: colors.primary, size: 30),
             ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textDark,
+              style: TextStyle(
+                color: colors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -50,8 +52,8 @@ class EmptyView extends StatelessWidget {
               Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.textMid,
+                style: TextStyle(
+                  color: colors.textSecondary,
                   fontSize: 13,
                   height: 1.4,
                   fontWeight: FontWeight.w500,
@@ -63,9 +65,9 @@ class EmptyView extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRetry,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
+                  foregroundColor: colors.primary,
                   side: BorderSide(
-                    color: AppColors.primary.withValues(alpha: 0.40),
+                    color: colors.primary.withValues(alpha: 0.40),
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 22,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/sm_colors.dart';
 
 /// Centered loading indicator with an optional message.
 class LoadingView extends StatelessWidget {
@@ -10,16 +10,18 @@ class LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 34,
             height: 34,
             child: CircularProgressIndicator(
               strokeWidth: 3,
-              color: AppColors.primary,
+              color: colors.primary,
             ),
           ),
           if (message != null) ...[
@@ -27,8 +29,8 @@ class LoadingView extends StatelessWidget {
             Text(
               message!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSoft,
+              style: TextStyle(
+                color: colors.textMuted,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),

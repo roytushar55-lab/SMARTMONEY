@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/sm_colors.dart';
 
 /// Friendly error state with an optional retry button.
 ///
@@ -20,6 +20,8 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -31,16 +33,16 @@ class ErrorView extends StatelessWidget {
               height: 64,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.10),
+                color: colors.danger.withValues(alpha: 0.10),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppColors.danger, size: 30),
+              child: Icon(icon, color: colors.danger, size: 30),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Something went wrong',
               style: TextStyle(
-                color: AppColors.textDark,
+                color: colors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -49,8 +51,8 @@ class ErrorView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textMid,
+              style: TextStyle(
+                color: colors.textSecondary,
                 fontSize: 13,
                 height: 1.4,
                 fontWeight: FontWeight.w500,
@@ -61,8 +63,8 @@ class ErrorView extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRetry,
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 22,
                     vertical: 12,

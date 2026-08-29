@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/widgets/brand_logo_mark.dart';
 import '../../../../core/widgets/network_image_with_fallback.dart';
 import '../../data/models/offer_list_item.dart';
@@ -15,6 +15,7 @@ class OfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final storeName = offer.storeName.trim();
     final shortDescription = offer.shortDescription?.trim() ?? '';
     final hasDescription = shortDescription.isNotEmpty;
@@ -28,10 +29,16 @@ class OfferCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.82),
+          color: colors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.70)),
-          boxShadow: [AppColors.cardShadow],
+          border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.10),
+              blurRadius: 32,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -44,13 +51,17 @@ class OfferCard extends StatelessWidget {
                   child: NetworkImageWithFallback(
                     url: offer.imageUrl,
                     fallbackIcon: Icons.local_offer_outlined,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                    iconColor: AppColors.primary,
+                    backgroundColor: colors.primary.withValues(alpha: 0.08),
+                    iconColor: colors.primary,
                     iconSize: 34,
                   ),
                 ),
                 if (offer.isFeatured)
-                  const Positioned(top: 10, left: 10, child: _FeaturedBadge()),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: _FeaturedBadge(colors: colors),
+                  ),
               ],
             ),
             Padding(
@@ -74,8 +85,8 @@ class OfferCard extends StatelessWidget {
                             storeName.toUpperCase(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.primary,
+                            style: TextStyle(
+                              color: colors.primary,
                               fontSize: 11,
                               letterSpacing: 0.4,
                               fontWeight: FontWeight.w800,
@@ -89,8 +100,8 @@ class OfferCard extends StatelessWidget {
                     offer.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textDark,
+                    style: TextStyle(
+                      color: colors.textPrimary,
                       fontSize: 15,
                       height: 1.25,
                       fontWeight: FontWeight.w800,
@@ -102,8 +113,8 @@ class OfferCard extends StatelessWidget {
                       shortDescription,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSoft,
+                      style: TextStyle(
+                        color: colors.textMuted,
                         fontSize: 12,
                         height: 1.35,
                         fontWeight: FontWeight.w500,
@@ -116,8 +127,10 @@ class OfferCard extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        if (hasCashback) _CashbackPill(text: cashback),
-                        if (hasCoupon) _CouponChip(code: coupon),
+                        if (hasCashback)
+                          _CashbackPill(text: cashback, colors: colors),
+                        if (hasCoupon)
+                          _CouponChip(code: coupon, colors: colors),
                       ],
                     ),
                   ],
@@ -132,19 +145,21 @@ class OfferCard extends StatelessWidget {
 }
 
 class _FeaturedBadge extends StatelessWidget {
-  const _FeaturedBadge();
+  const _FeaturedBadge({required this.colors});
+
+  final SmColors colors;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.warning,
+        color: colors.warning,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
+        children: [
           Icon(Icons.star_rounded, color: Colors.white, size: 12),
           SizedBox(width: 3),
           Text(
@@ -163,16 +178,17 @@ class _FeaturedBadge extends StatelessWidget {
 
 /// Bold, solid cashback badge (CashKaro-style emphasis on the rate).
 class _CashbackPill extends StatelessWidget {
-  const _CashbackPill({required this.text});
+  const _CashbackPill({required this.text, required this.colors});
 
   final String text;
+  final SmColors colors;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.success,
+        color: colors.success,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -196,32 +212,33 @@ class _CashbackPill extends StatelessWidget {
 }
 
 class _CouponChip extends StatelessWidget {
-  const _CouponChip({required this.code});
+  const _CouponChip({required this.code, required this.colors});
 
   final String code;
+  final SmColors colors;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.10),
+        color: colors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.30)),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.30)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.confirmation_number_outlined,
-            color: AppColors.primary,
+            color: colors.primary,
             size: 13,
           ),
           const SizedBox(width: 5),
           Text(
             code,
-            style: const TextStyle(
-              color: AppColors.primary,
+            style: TextStyle(
+              color: colors.primary,
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),

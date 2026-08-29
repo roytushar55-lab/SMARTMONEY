@@ -62,6 +62,13 @@ public sealed class LoginUserCommandHandler
                 "Invalid email or password.");
         }
 
+        if (user.PasswordHash is null)
+        {
+            // Google-only account: there is no password to check against.
+            throw new InvalidOperationException(
+                "Invalid email or password.");
+        }
+
         bool passwordMatches = _passwordHasher.Verify(
             command.Password,
             user.PasswordHash);

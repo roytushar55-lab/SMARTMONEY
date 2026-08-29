@@ -3,15 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../../core/widgets/app_drawer.dart';
+import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/widgets/brand_logo_mark.dart';
 import '../../../../core/widgets/empty_view.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../../core/widgets/login_demo_widgets.dart';
-import '../../../../core/widgets/menu_lines_icon.dart';
 import '../../../../core/widgets/network_image_with_fallback.dart';
 import '../../../../core/widgets/profile_avatar.dart';
 import '../../../../core/widgets/view_state.dart';
@@ -42,8 +40,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final BrowsingApiService _browsingApiService = BrowsingApiService();
 
-  /// Profile lives in a shared store because the drawer shows it too, and the
-  /// drawer is now hosted by several screens.
+  /// Profile lives in a shared store so both the dashboard topbar and the
+  /// profile screen stay in sync without a state-management package.
   final ProfileSummaryStore _profileStore = ProfileSummaryStore.instance;
 
   // Browsing data (real backend data — no hardcoded brands).
@@ -240,20 +238,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _openStores() {
-    final selectTab = widget.onSelectTab;
-    if (selectTab != null) {
-      selectTab(ShellTab.stores);
-      return;
-    }
     Navigator.pushNamed(context, RouteNames.stores);
   }
 
   void _openOffers() {
-    final selectTab = widget.onSelectTab;
-    if (selectTab != null) {
-      selectTab(ShellTab.offers);
-      return;
-    }
     Navigator.pushNamed(context, RouteNames.offers);
   }
 
@@ -360,7 +348,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       },
       child: Scaffold(
-        drawer: const AppDrawer(current: AppDrawerItem.dashboard),
         body: LoginDemoBackground(
           child: SafeArea(
             // The topbar and search bar sit outside the scroll view so they
@@ -479,20 +466,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// the search bar. Painted over the scrolling content, with a soft shadow so
   /// sections passing underneath read as being behind it.
   Widget _buildPinnedHeader() {
+    final colors = SmColors.of(context);
+
     return DecoratedBox(
       decoration: BoxDecoration(
         // Opaque on purpose. The header is painted over the scroll view, so a
         // translucent fill would let the sections show through as they pass
-        // underneath. These are the top colours of AppColors.backgroundGradient
-        // so the seam with the scrolling area is invisible.
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFDBEAFE), Color(0xFFDDE7FE)],
-        ),
+        // underneath. Matches the background gradient's starting colour so
+        // the seam with the scrolling area is invisible.
+        color: colors.bgSecondary,
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withValues(alpha: 0.06),
+            color: colors.shadow.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -512,6 +497,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildTopbar() {
+    final colors = SmColors.of(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 14, 20, 0),
       child: LayoutBuilder(
@@ -520,14 +507,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           return Row(
             children: [
-              _buildMenuButton(),
-              const SizedBox(width: 8),
               Container(
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [AppColors.cardShadow],
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.shadow.withValues(alpha: 0.10),
+                      blurRadius: 32,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Transform.scale(
@@ -566,34 +557,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  /// The dashboard has no AppBar, so the drawer is opened by hand from the
-  /// topbar. [Builder] supplies a context below this Scaffold, which is what
-  /// `Scaffold.of` needs to find it.
-  Widget _buildMenuButton() {
-    return SizedBox(
-      width: 42,
-      height: 42,
-      child: Builder(
-        builder: (context) => IconButton(
-          tooltip: 'Open menu',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-          splashRadius: 22,
-          icon: const MenuLinesIcon(),
-          onPressed: () {
-            // Otherwise the keyboard raised by the search field covers it.
-            _searchFocusNode.unfocus();
-            Scaffold.of(context).openDrawer();
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _buildProfileSection() {
+    final colors = SmColors.of(context);
+
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: () {
+        final selectTab = widget.onSelectTab;
+        if (selectTab != null) {
+          selectTab(ShellTab.profile);
+          return;
+        }
         Navigator.pushNamed(context, RouteNames.profile).then((_) {
           _profileStore.refresh();
         });
@@ -602,10 +576,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         height: 46,
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.76),
+          color: colors.surface.withValues(alpha: 0.76),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.68)),
-          boxShadow: [AppColors.cardShadow],
+          border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.10),
+              blurRadius: 32,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -619,9 +599,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 fontSize: 12,
               ),
             ),
-            const Icon(
+            Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: AppColors.textSoft,
+              color: colors.textMuted,
               size: 18,
             ),
           ],
@@ -655,13 +635,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Shown instead of the carousel when the catalogue has no offers yet.
   Widget _buildWelcomeBanner() {
+    final colors = SmColors.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colors.primary, colors.primaryHover],
+        ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [AppColors.buttonShadow],
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -689,7 +681,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: _openStores,
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: AppColors.primary,
+              foregroundColor: colors.primary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -713,19 +705,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// decorative) tune icon at rest and the clear button once there is text, so
   /// the pill never changes width.
   Widget _buildSearchBar() {
+    final colors = SmColors.of(context);
     final hasText = _searchController.text.isNotEmpty;
 
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: AppColors.inputFill.withValues(alpha: 0.80),
+        color: colors.surfaceHover.withValues(alpha: 0.80),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search_rounded, color: AppColors.textSoft),
+          Icon(Icons.search_rounded, color: colors.textMuted),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -741,13 +734,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _performSearch(trimmed);
                 }
               },
-              cursorColor: AppColors.primary,
-              style: const TextStyle(
-                color: AppColors.textDark,
+              cursorColor: colors.primary,
+              style: TextStyle(
+                color: colors.textPrimary,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -755,7 +748,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 contentPadding: EdgeInsets.zero,
                 hintText: 'Search stores, brands, offers',
                 hintStyle: TextStyle(
-                  color: AppColors.textSoft,
+                  color: colors.textMuted,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -766,7 +759,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             IconButton(
               onPressed: _clearSearch,
               icon: const Icon(Icons.close_rounded),
-              color: AppColors.textSoft,
+              color: colors.textMuted,
               iconSize: 20,
               // Default IconButton sizing would fight the pill's padding.
               padding: EdgeInsets.zero,
@@ -775,7 +768,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               tooltip: 'Clear search',
             )
           else
-            const Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+            Icon(Icons.tune_rounded, color: colors.primary, size: 20),
         ],
       ),
     );
@@ -991,6 +984,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool showArrow = true,
     VoidCallback? onTap,
   }) {
+    final colors = SmColors.of(context);
+
     return InkWell(
       onTap: showArrow ? onTap : null,
       borderRadius: BorderRadius.circular(8),
@@ -1002,8 +997,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1011,8 +1006,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 3),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: AppColors.textSoft,
+                  style: TextStyle(
+                    color: colors.textMuted,
                     fontSize: 12,
                   ),
                 ),
@@ -1020,7 +1015,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           if (showArrow)
-            const Icon(Icons.arrow_forward_rounded, color: AppColors.primary),
+            Icon(Icons.arrow_forward_rounded, color: colors.primary),
         ],
       ),
     );
@@ -1035,6 +1030,7 @@ class _DashboardOfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final storeName = offer.storeName.trim();
     final cashback = offer.cashbackText?.trim() ?? '';
     final hasCashback = cashback.isNotEmpty;
@@ -1046,10 +1042,16 @@ class _DashboardOfferCard extends StatelessWidget {
         width: 240,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.82),
+          color: colors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
-          boxShadow: [AppColors.cardShadow],
+          border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.10),
+              blurRadius: 32,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1066,8 +1068,8 @@ class _DashboardOfferCard extends StatelessWidget {
                     child: NetworkImageWithFallback(
                       url: offer.imageUrl,
                       fallbackIcon: Icons.local_offer_outlined,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.10),
-                      iconColor: AppColors.primary,
+                      backgroundColor: colors.primary.withValues(alpha: 0.10),
+                      iconColor: colors.primary,
                       iconSize: 26,
                     ),
                   ),
@@ -1092,7 +1094,7 @@ class _DashboardOfferCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.warning,
+                          color: colors.warning,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: const Text(
@@ -1114,8 +1116,8 @@ class _DashboardOfferCard extends StatelessWidget {
                 storeName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textDark,
+                style: TextStyle(
+                  color: colors.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1126,8 +1128,8 @@ class _DashboardOfferCard extends StatelessWidget {
                 offer.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textMid,
+                style: TextStyle(
+                  color: colors.textSecondary,
                   fontSize: 13,
                   height: 1.3,
                   fontWeight: FontWeight.w600,
@@ -1143,7 +1145,7 @@ class _DashboardOfferCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: hasCashback ? AppColors.success : AppColors.primary,
+                      color: hasCashback ? colors.success : colors.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1155,7 +1157,7 @@ class _DashboardOfferCard extends StatelessWidget {
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.textDark,
+                    color: colors.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -1181,13 +1183,13 @@ class _SectionLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: SizedBox(
         width: 26,
         height: 26,
         child: CircularProgressIndicator(
           strokeWidth: 2.5,
-          color: AppColors.primary,
+          color: SmColors.of(context).primary,
         ),
       ),
     );
@@ -1202,19 +1204,21 @@ class _SectionInlineError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Center(
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off_rounded, color: AppColors.textSoft, size: 18),
+          Icon(Icons.cloud_off_rounded, color: colors.textMuted, size: 18),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               message,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textSoft,
+              style: TextStyle(
+                color: colors.textMuted,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -1240,8 +1244,8 @@ class _SectionInlineEmpty extends StatelessWidget {
     return Center(
       child: Text(
         message,
-        style: const TextStyle(
-          color: AppColors.textSoft,
+        style: TextStyle(
+          color: SmColors.of(context).textMuted,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
@@ -1263,13 +1267,15 @@ class _StepTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Container(
       height: 96,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: colors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.12)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1277,7 +1283,7 @@ class _StepTile extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Icon(icon, color: AppColors.primary, size: 25),
+              Icon(icon, color: colors.primary, size: 25),
               Positioned(
                 right: -10,
                 top: -10,
@@ -1285,8 +1291,8 @@ class _StepTile extends StatelessWidget {
                   width: 18,
                   height: 18,
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
+                  decoration: BoxDecoration(
+                    color: colors.primary,
                     shape: BoxShape.circle,
                   ),
                   child: Text(
@@ -1306,7 +1312,7 @@ class _StepTile extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppColors.textSoft, fontSize: 11),
+            style: TextStyle(color: colors.textMuted, fontSize: 11),
           ),
         ],
       ),

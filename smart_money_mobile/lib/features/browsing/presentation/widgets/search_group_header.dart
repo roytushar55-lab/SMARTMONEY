@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/sm_colors.dart';
 
 /// Section heading above a group of search results ("Stores (3)").
 ///
@@ -20,14 +20,16 @@ class SearchGroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
+
     return Row(
       children: [
-        Icon(icon, color: AppColors.primary, size: 18),
+        Icon(icon, color: colors.primary, size: 18),
         const SizedBox(width: 8),
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textDark,
+          style: TextStyle(
+            color: colors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w800,
           ),
@@ -35,8 +37,8 @@ class SearchGroupHeader extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           '($count)',
-          style: const TextStyle(
-            color: AppColors.textSoft,
+          style: TextStyle(
+            color: colors.textMuted,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),

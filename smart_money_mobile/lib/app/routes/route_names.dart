@@ -18,4 +18,6 @@ class RouteNames {
   static const storeDetails = '/store-details';
   static const offers = '/offers';
   static const offerDetails = '/offer-details';
+
+  static const cashbackDetails = '/cashback-details';
 }

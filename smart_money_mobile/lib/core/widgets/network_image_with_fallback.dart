@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
 import '../network/api_config.dart';
+import '../theme/sm_colors.dart';
 
 /// Renders a remote image and gracefully degrades to an icon placeholder.
 ///
@@ -47,9 +47,10 @@ class NetworkImageWithFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolved = _resolvedUrl;
+    final colors = SmColors.of(context);
 
     if (resolved == null) {
-      return _buildFallback();
+      return _buildFallback(colors);
     }
 
     return Image.network(
@@ -62,39 +63,41 @@ class NetworkImageWithFallback extends StatelessWidget {
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return _buildPlaceholder(
-          const Center(
+          colors,
+          Center(
             child: SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
             ),
           ),
         );
       },
-      errorBuilder: (context, error, stackTrace) => _buildFallback(),
+      errorBuilder: (context, error, stackTrace) => _buildFallback(colors),
     );
   }
 
-  Widget _buildFallback() {
+  Widget _buildFallback(SmColors colors) {
     return _buildPlaceholder(
+      colors,
       Center(
         child: Icon(
           fallbackIcon,
-          color: iconColor ?? AppColors.textSoft,
+          color: iconColor ?? colors.textMuted,
           size: iconSize ?? 26,
         ),
       ),
     );
   }
 
-  Widget _buildPlaceholder(Widget child) {
+  Widget _buildPlaceholder(SmColors colors, Widget child) {
     return Container(
       width: width,
       height: height,
-      color: backgroundColor ?? AppColors.inputFill,
+      color: backgroundColor ?? colors.surfaceHover,
       child: child,
     );
   }

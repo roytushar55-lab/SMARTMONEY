@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/sm_colors.dart';
 
 class LoginDemoBackground extends StatelessWidget {
   const LoginDemoBackground({super.key, required this.child});
@@ -14,7 +14,7 @@ class LoginDemoBackground extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
+      decoration: BoxDecoration(gradient: SmColors.of(context).backgroundGradient),
       child: child,
     );
   }
@@ -45,14 +45,21 @@ class LoginDemoGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final card = Container(
       width: width,
       padding: padding,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: enableBlur ? 0.80 : 0.86),
+        color: colors.surface.withValues(alpha: enableBlur ? 0.80 : 0.86),
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.60)),
-        boxShadow: [AppColors.cardShadow],
+        border: Border.all(color: colors.border.withValues(alpha: 0.60)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.10),
+            blurRadius: 32,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: child,
     );
@@ -87,20 +94,29 @@ class LoginDemoGradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = SmColors.of(context);
     final enabled = onPressed != null && !isLoading;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: enabled
-            ? AppColors.primaryGradient
-            : LinearGradient(
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.45),
-                  AppColors.primaryEnd.withValues(alpha: 0.45),
+        gradient: LinearGradient(
+          colors: enabled
+              ? [colors.primary, colors.primaryHover]
+              : [
+                  colors.primary.withValues(alpha: 0.45),
+                  colors.primaryHover.withValues(alpha: 0.45),
                 ],
-              ),
+        ),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: enabled ? [AppColors.buttonShadow] : const [],
+        boxShadow: enabled
+            ? [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.35),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : const [],
       ),
       child: Material(
         color: Colors.transparent,

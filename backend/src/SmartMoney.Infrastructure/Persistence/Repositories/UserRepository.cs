@@ -49,6 +49,17 @@ public sealed class UserRepository : IUserRepository
                 cancellationToken);
     }
 
+    public Task<User?> GetByGoogleIdAsync(
+        string googleId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Users
+            .Include(user => user.Role)
+            .SingleOrDefaultAsync(
+                user => user.GoogleId == googleId,
+                cancellationToken);
+    }
+
     public Task<User?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default)
