@@ -21,4 +21,11 @@ public sealed class CashbackSettingsRepository : ICashbackSettingsRepository
             .OrderBy(settings => settings.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    public async Task<CashbackSettings?> GetTrackedAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.CashbackSettings
+            .OrderBy(settings => settings.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

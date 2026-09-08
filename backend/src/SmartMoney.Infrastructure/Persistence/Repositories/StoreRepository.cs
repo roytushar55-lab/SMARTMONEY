@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Domain.Entities;
@@ -62,5 +62,53 @@ public sealed class StoreRepository : IStoreRepository
             .OrderBy(store => store.DisplayOrder)
             .ThenBy(store => store.Name)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Store>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Stores
+            .AsNoTracking()
+            .Include(store => store.StoreCategories)
+            .OrderBy(store => store.DisplayOrder)
+            .ThenBy(store => store.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Store?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Stores
+            .Include(store => store.StoreCategories)
+            .FirstOrDefaultAsync(store => store.Id == id, cancellationToken);
+    }
+
+    public async Task AddAsync(Store store, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.Stores.AddAsync(store, cancellationToken);
+    }
+
+    public async Task<bool> NameExistsAsync(
+        string name,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Stores
+            .AsNoTracking()
+            .AnyAsync(
+                store => store.Name == name &&
+                    (excludeId == null || store.Id != excludeId),
+                cancellationToken);
+    }
+
+    public async Task<bool> SlugExistsAsync(
+        string slug,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Stores
+            .AsNoTracking()
+            .AnyAsync(
+                store => store.Slug == slug &&
+                    (excludeId == null || store.Id != excludeId),
+                cancellationToken);
     }
 }

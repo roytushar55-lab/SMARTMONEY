@@ -3,6 +3,7 @@ using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Contracts.Affiliate;
 using SmartMoney.Application.Contracts.Categories;
 using SmartMoney.Application.Contracts.Cashbacks;
+using SmartMoney.Application.Contracts.CashbackSettings;
 using SmartMoney.Application.Contracts.Identity.ChangeUserRole;
 using SmartMoney.Application.Contracts.Identity.ForgotPassword;
 using SmartMoney.Application.Contracts.Identity.Login;
@@ -23,7 +24,12 @@ using SmartMoney.Application.Features.Cashbacks.GetMyCashbacks;
 using SmartMoney.Application.Features.Cashbacks.ListCashbacks;
 using SmartMoney.Application.Features.Cashbacks.RejectCashback;
 using SmartMoney.Application.Features.Cashbacks.ReverseCashback;
+using SmartMoney.Application.Features.CashbackSettings.GetCashbackSettings;
+using SmartMoney.Application.Features.CashbackSettings.UpdateCashbackSettings;
+using SmartMoney.Application.Features.Categories.CreateCategory;
 using SmartMoney.Application.Features.Categories.GetCategories;
+using SmartMoney.Application.Features.Categories.ListCategoriesAdmin;
+using SmartMoney.Application.Features.Categories.UpdateCategory;
 using SmartMoney.Application.Features.Identity.ChangeUserRole;
 using SmartMoney.Application.Features.Identity.ForgotPassword;
 using SmartMoney.Application.Features.Identity.GoogleLogin;
@@ -33,13 +39,19 @@ using SmartMoney.Application.Features.Identity.Register;
 using SmartMoney.Application.Features.Identity.ResendEmailOtp;
 using SmartMoney.Application.Features.Identity.ResetPassword;
 using SmartMoney.Application.Features.Identity.VerifyEmailOtp;
+using SmartMoney.Application.Features.Offers.CreateOffer;
 using SmartMoney.Application.Features.Offers.GetOfferDetails;
 using SmartMoney.Application.Features.Offers.GetOffers;
+using SmartMoney.Application.Features.Offers.ListOffersAdmin;
+using SmartMoney.Application.Features.Offers.UpdateOffer;
 using SmartMoney.Application.Features.Search;
+using SmartMoney.Application.Features.Stores.CreateStore;
 using SmartMoney.Application.Features.Stores.GetStoreDetails;
 using SmartMoney.Application.Features.Stores.GetStoreOffers;
 using SmartMoney.Application.Features.Stores.GetStores;
 using SmartMoney.Application.Features.Stores.GetStoresByCategory;
+using SmartMoney.Application.Features.Stores.ListStoresAdmin;
+using SmartMoney.Application.Features.Stores.UpdateStore;
 using SmartMoney.Application.Features.Wallets.GetMyWallet;
 using SmartMoney.Application.Features.Wallets.GetMyWalletTransactions;
 
@@ -125,6 +137,42 @@ public static class ApplicationDependencyInjection
         services.AddScoped<IQueryHandler<GetMyWalletTransactionsQuery,WalletTransactionListResponse>,GetMyWalletTransactionsQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetMyCashbacksQuery,MyCashbackListResponse>,GetMyCashbacksQueryHandler>();
+
+        services.AddScoped<CreateCategoryValidator>();
+
+        services.AddScoped<ICommandHandler<CreateCategoryCommand,CategoryAdminResponse>,CreateCategoryCommandHandler>();
+
+        services.AddScoped<UpdateCategoryValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateCategoryCommand,CategoryAdminResponse?>,UpdateCategoryCommandHandler>();
+
+        services.AddScoped<IQueryHandler<ListCategoriesAdminQuery,IReadOnlyList<CategoryAdminResponse>>,ListCategoriesAdminQueryHandler>();
+
+        services.AddScoped<CreateStoreValidator>();
+
+        services.AddScoped<ICommandHandler<CreateStoreCommand,StoreAdminResponse>,CreateStoreCommandHandler>();
+
+        services.AddScoped<UpdateStoreValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateStoreCommand,StoreAdminResponse?>,UpdateStoreCommandHandler>();
+
+        services.AddScoped<IQueryHandler<ListStoresAdminQuery,IReadOnlyList<StoreAdminResponse>>,ListStoresAdminQueryHandler>();
+
+        services.AddScoped<CreateOfferValidator>();
+
+        services.AddScoped<ICommandHandler<CreateOfferCommand,OfferAdminResponse?>,CreateOfferCommandHandler>();
+
+        services.AddScoped<UpdateOfferValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateOfferCommand,OfferAdminResponse?>,UpdateOfferCommandHandler>();
+
+        services.AddScoped<IQueryHandler<ListOffersAdminQuery,IReadOnlyList<OfferAdminResponse>>,ListOffersAdminQueryHandler>();
+
+        services.AddScoped<IQueryHandler<GetCashbackSettingsQuery,CashbackSettingsResponse?>,GetCashbackSettingsQueryHandler>();
+
+        services.AddScoped<UpdateCashbackSettingsValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateCashbackSettingsCommand,CashbackSettingsResponse?>,UpdateCashbackSettingsCommandHandler>();
 
         return services;
     }
