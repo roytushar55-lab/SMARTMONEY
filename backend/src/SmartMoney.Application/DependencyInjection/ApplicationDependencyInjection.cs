@@ -36,6 +36,7 @@ using SmartMoney.Application.Features.Categories.GetCategories;
 using SmartMoney.Application.Features.Categories.ListCategoriesAdmin;
 using SmartMoney.Application.Features.Categories.UpdateCategory;
 using SmartMoney.Application.Features.Identity.ChangeUserRole;
+using SmartMoney.Application.Features.Identity.GetUserByEmail;
 using SmartMoney.Application.Features.Identity.ForgotPassword;
 using SmartMoney.Application.Features.Identity.GoogleLogin;
 using SmartMoney.Application.Features.Identity.Login;
@@ -139,6 +140,8 @@ public static class ApplicationDependencyInjection
         services.AddScoped<ChangeUserRoleValidator>();
 
         services.AddScoped<ICommandHandler<ChangeUserRoleCommand,ChangeUserRoleResponse?>,ChangeUserRoleCommandHandler>();
+
+        services.AddScoped<IQueryHandler<GetUserByEmailQuery,AdminUserLookupResponse?>,GetUserByEmailQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetMyWalletQuery,MyWalletResponse>,GetMyWalletQueryHandler>();
 
