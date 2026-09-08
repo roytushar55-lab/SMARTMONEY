@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Contracts.Affiliate;
+using SmartMoney.Application.Contracts.AffiliateNetworks;
 using SmartMoney.Application.Contracts.Categories;
 using SmartMoney.Application.Contracts.Cashbacks;
 using SmartMoney.Application.Contracts.CashbackSettings;
@@ -14,11 +15,15 @@ using SmartMoney.Application.Contracts.Identity.ResetPassword;
 using SmartMoney.Application.Contracts.Identity.VerifyEmailOtp;
 using SmartMoney.Application.Contracts.Offers;
 using SmartMoney.Application.Contracts.Search;
+using SmartMoney.Application.Contracts.StoreAffiliateMappings;
 using SmartMoney.Application.Contracts.Stores;
 using SmartMoney.Application.Contracts.Wallets;
 using SmartMoney.Application.Features.Affiliate.CreateAffiliateClick;
 using SmartMoney.Application.Features.Affiliate.IngestAffiliateConversion;
 using SmartMoney.Application.Features.Affiliate.ResolveAffiliateRedirect;
+using SmartMoney.Application.Features.AffiliateNetworks.CreateAffiliateNetwork;
+using SmartMoney.Application.Features.AffiliateNetworks.ListAffiliateNetworksAdmin;
+using SmartMoney.Application.Features.AffiliateNetworks.UpdateAffiliateNetwork;
 using SmartMoney.Application.Features.Cashbacks.ApproveCashback;
 using SmartMoney.Application.Features.Cashbacks.GetMyCashbacks;
 using SmartMoney.Application.Features.Cashbacks.ListCashbacks;
@@ -52,6 +57,9 @@ using SmartMoney.Application.Features.Stores.GetStores;
 using SmartMoney.Application.Features.Stores.GetStoresByCategory;
 using SmartMoney.Application.Features.Stores.ListStoresAdmin;
 using SmartMoney.Application.Features.Stores.UpdateStore;
+using SmartMoney.Application.Features.StoreAffiliateMappings.CreateStoreAffiliateMapping;
+using SmartMoney.Application.Features.StoreAffiliateMappings.ListStoreAffiliateMappingsAdmin;
+using SmartMoney.Application.Features.StoreAffiliateMappings.UpdateStoreAffiliateMapping;
 using SmartMoney.Application.Features.Wallets.GetMyWallet;
 using SmartMoney.Application.Features.Wallets.GetMyWalletTransactions;
 
@@ -173,6 +181,26 @@ public static class ApplicationDependencyInjection
         services.AddScoped<UpdateCashbackSettingsValidator>();
 
         services.AddScoped<ICommandHandler<UpdateCashbackSettingsCommand,CashbackSettingsResponse?>,UpdateCashbackSettingsCommandHandler>();
+
+        services.AddScoped<CreateAffiliateNetworkValidator>();
+
+        services.AddScoped<ICommandHandler<CreateAffiliateNetworkCommand,AffiliateNetworkAdminResponse>,CreateAffiliateNetworkCommandHandler>();
+
+        services.AddScoped<UpdateAffiliateNetworkValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateAffiliateNetworkCommand,AffiliateNetworkAdminResponse?>,UpdateAffiliateNetworkCommandHandler>();
+
+        services.AddScoped<IQueryHandler<ListAffiliateNetworksAdminQuery,IReadOnlyList<AffiliateNetworkAdminResponse>>,ListAffiliateNetworksAdminQueryHandler>();
+
+        services.AddScoped<CreateStoreAffiliateMappingValidator>();
+
+        services.AddScoped<ICommandHandler<CreateStoreAffiliateMappingCommand,StoreAffiliateMappingAdminResponse?>,CreateStoreAffiliateMappingCommandHandler>();
+
+        services.AddScoped<UpdateStoreAffiliateMappingValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateStoreAffiliateMappingCommand,StoreAffiliateMappingAdminResponse?>,UpdateStoreAffiliateMappingCommandHandler>();
+
+        services.AddScoped<IQueryHandler<ListStoreAffiliateMappingsAdminQuery,IReadOnlyList<StoreAffiliateMappingAdminResponse>>,ListStoreAffiliateMappingsAdminQueryHandler>();
 
         return services;
     }
