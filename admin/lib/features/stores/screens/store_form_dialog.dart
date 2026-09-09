@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/image_upload_field.dart';
+import '../../../core/widgets/spaced_column.dart';
 import '../../categories/models/admin_category.dart';
 import '../models/admin_store.dart';
 
@@ -42,7 +43,8 @@ Future<StoreFormResult?> showStoreFormDialog(
 }) {
   return showDialog<StoreFormResult>(
     context: context,
-    builder: (_) => _StoreFormDialog(categories: categories, existing: existing),
+    builder: (_) =>
+        _StoreFormDialog(categories: categories, existing: existing),
   );
 }
 
@@ -58,18 +60,30 @@ class _StoreFormDialog extends StatefulWidget {
 
 class _StoreFormDialogState extends State<_StoreFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final _nameController = TextEditingController(text: widget.existing?.name);
-  late final _slugController = TextEditingController(text: widget.existing?.slug);
-  late final _shortDescController =
-      TextEditingController(text: widget.existing?.shortDescription);
-  late final _descController = TextEditingController(text: widget.existing?.description);
-  late final _logoUrlController = TextEditingController(text: widget.existing?.logoUrl);
-  late final _bannerUrlController =
-      TextEditingController(text: widget.existing?.bannerUrl);
-  late final _websiteUrlController =
-      TextEditingController(text: widget.existing?.websiteUrl);
-  late final _cashbackTextController =
-      TextEditingController(text: widget.existing?.defaultCashbackText);
+  late final _nameController = TextEditingController(
+    text: widget.existing?.name,
+  );
+  late final _slugController = TextEditingController(
+    text: widget.existing?.slug,
+  );
+  late final _shortDescController = TextEditingController(
+    text: widget.existing?.shortDescription,
+  );
+  late final _descController = TextEditingController(
+    text: widget.existing?.description,
+  );
+  late final _logoUrlController = TextEditingController(
+    text: widget.existing?.logoUrl,
+  );
+  late final _bannerUrlController = TextEditingController(
+    text: widget.existing?.bannerUrl,
+  );
+  late final _websiteUrlController = TextEditingController(
+    text: widget.existing?.websiteUrl,
+  );
+  late final _cashbackTextController = TextEditingController(
+    text: widget.existing?.defaultCashbackText,
+  );
   late final _displayOrderController = TextEditingController(
     text: '${widget.existing?.displayOrder ?? 0}',
   );
@@ -101,12 +115,15 @@ class _StoreFormDialogState extends State<_StoreFormDialog> {
     Navigator.of(context).pop(
       StoreFormResult(
         name: _nameController.text.trim(),
-        slug: _slugController.text.trim().isEmpty ? null : _slugController.text.trim(),
+        slug: _slugController.text.trim().isEmpty
+            ? null
+            : _slugController.text.trim(),
         shortDescription: _shortDescController.text.trim().isEmpty
             ? null
             : _shortDescController.text.trim(),
-        description:
-            _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+        description: _descController.text.trim().isEmpty
+            ? null
+            : _descController.text.trim(),
         logoUrl: _logoUrlController.text.trim().isEmpty
             ? null
             : _logoUrlController.text.trim(),
@@ -136,11 +153,12 @@ class _StoreFormDialogState extends State<_StoreFormDialog> {
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: withGaps([
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: 'Name'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: _slugController,
@@ -148,17 +166,21 @@ class _StoreFormDialogState extends State<_StoreFormDialog> {
                     labelText: 'Slug',
                     hintText: _isEdit ? null : 'Leave blank to auto-generate',
                   ),
-                  validator: (v) =>
-                      _isEdit && (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  validator: (v) => _isEdit && (v == null || v.trim().isEmpty)
+                      ? 'Required'
+                      : null,
                 ),
                 TextFormField(
                   controller: _websiteUrlController,
                   decoration: const InputDecoration(labelText: 'Website URL'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: _shortDescController,
-                  decoration: const InputDecoration(labelText: 'Short description'),
+                  decoration: const InputDecoration(
+                    labelText: 'Short description',
+                  ),
                 ),
                 TextFormField(
                   controller: _descController,
@@ -167,16 +189,15 @@ class _StoreFormDialogState extends State<_StoreFormDialog> {
                 ),
                 TextFormField(
                   controller: _cashbackTextController,
-                  decoration:
-                      const InputDecoration(labelText: 'Default cashback text'),
+                  decoration: const InputDecoration(
+                    labelText: 'Default cashback text',
+                  ),
                 ),
-                const SizedBox(height: AdminSpacing.sm),
                 ImageUploadField(
                   controller: _logoUrlController,
                   label: 'Logo URL',
                   folder: 'stores',
                 ),
-                const SizedBox(height: AdminSpacing.sm),
                 ImageUploadField(
                   controller: _bannerUrlController,
                   label: 'Banner URL',
@@ -200,7 +221,6 @@ class _StoreFormDialogState extends State<_StoreFormDialog> {
                     value: _isActive,
                     onChanged: (v) => setState(() => _isActive = v),
                   ),
-                const SizedBox(height: AdminSpacing.sm),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -226,7 +246,7 @@ class _StoreFormDialogState extends State<_StoreFormDialog> {
                       )
                       .toList(),
                 ),
-              ],
+              ]),
             ),
           ),
         ),

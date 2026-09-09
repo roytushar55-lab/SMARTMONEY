@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
+import '../../../core/widgets/admin_page_header.dart';
+import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_table_card.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -46,7 +49,10 @@ class _OffersScreenState extends State<OffersScreen> {
   Future<void> _load() async {
     setState(() => _state = ViewState.loading);
     try {
-      final results = await Future.wait([_offerService.list(), _storeService.list()]);
+      final results = await Future.wait([
+        _offerService.list(),
+        _storeService.list(),
+      ]);
       setState(() {
         _offers = results[0] as List<AdminOffer>;
         _stores = results[1] as List<AdminStore>;
@@ -81,7 +87,11 @@ class _OffersScreenState extends State<OffersScreen> {
   }
 
   Future<void> _edit(AdminOffer offer) async {
-    final body = await showOfferFormDialog(context, stores: _stores, existing: offer);
+    final body = await showOfferFormDialog(
+      context,
+      stores: _stores,
+      existing: offer,
+    );
     if (body == null || !mounted) return;
 
     try {
@@ -97,28 +107,18 @@ class _OffersScreenState extends State<OffersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
+    return AdminPageScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Offers',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AdminColors.textPrimary,
-                ),
-              ),
-              FilledButton.icon(
-                onPressed: _create,
-                icon: const Icon(Icons.add),
-                label: const Text('New offer'),
-              ),
-            ],
+          AdminPageHeader(
+            title: 'Offers',
+            description: 'Cashback, coupon, and deal offers across all stores.',
+            action: FilledButton.icon(
+              onPressed: _create,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('New offer'),
+            ),
           ),
           const SizedBox(height: AdminSpacing.lg),
           Expanded(child: _buildBody()),
@@ -137,8 +137,7 @@ class _OffersScreenState extends State<OffersScreen> {
       case ViewState.empty:
         return const EmptyView(message: 'No offers yet.');
       case ViewState.success:
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        return AdminTableCard(
           child: DataTable(
             columns: const [
               DataColumn(label: Text('Title')),

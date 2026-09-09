@@ -64,7 +64,9 @@ class AdminOffer {
       startAt: json['startAt'] == null
           ? null
           : DateTime.tryParse('${json['startAt']}'),
-      endAt: json['endAt'] == null ? null : DateTime.tryParse('${json['endAt']}'),
+      endAt: json['endAt'] == null
+          ? null
+          : DateTime.tryParse('${json['endAt']}'),
       isFeatured: json['isFeatured'] as bool? ?? false,
       priority: (json['priority'] as num?)?.toInt() ?? 0,
       isActive: json['isActive'] as bool? ?? false,
@@ -73,4 +75,9 @@ class AdminOffer {
 }
 
 const List<String> kOfferTypes = ['Cashback', 'Coupon', 'Deal'];
-const List<String> kCashbackTypes = ['Percentage', 'FlatAmount', 'Variable', 'None'];
+const List<String> kCashbackTypes = [
+  'Percentage',
+  'FlatAmount',
+  'Variable',
+  'None',
+];

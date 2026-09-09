@@ -37,18 +37,12 @@ Future<bool> showConfirmDialog(
 
 void showErrorSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: AdminColors.danger,
-    ),
+    SnackBar(content: Text(message), backgroundColor: AdminColors.danger),
   );
 }
 
 void showSuccessSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: AdminColors.success,
-    ),
+    SnackBar(content: Text(message), backgroundColor: AdminColors.success),
   );
 }

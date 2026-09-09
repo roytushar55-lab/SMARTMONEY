@@ -63,26 +63,56 @@ class _AdminShellState extends State<AdminShell> {
 
   Widget _buildSidebar(bool isSuperAdmin, String? email) {
     return Container(
-      width: 220,
+      width: 232,
       color: AdminColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: AdminSpacing.xl),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AdminSpacing.lg),
-            child: Text(
-              'SmartMoney Admin',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AdminColors.primary,
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AdminSpacing.lg,
+              AdminSpacing.xl,
+              AdminSpacing.lg,
+              AdminSpacing.xl,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AdminColors.primary,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Text(
+                    'S',
+                    style: TextStyle(
+                      color: AdminColors.onPrimary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AdminSpacing.sm),
+                const Text(
+                  'SmartMoney',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AdminColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AdminSpacing.xl),
           _navItem('Dashboard', Icons.dashboard_outlined, _Section.dashboard),
-          _navItem('Cashback review', Icons.receipt_long_outlined, _Section.cashbacks),
+          _navItem(
+            'Cashback review',
+            Icons.receipt_long_outlined,
+            _Section.cashbacks,
+          ),
           _navItem('Categories', Icons.category_outlined, _Section.categories),
           _navItem('Stores', Icons.storefront_outlined, _Section.stores),
           _navItem('Offers', Icons.local_offer_outlined, _Section.offers),
@@ -92,30 +122,53 @@ class _AdminShellState extends State<AdminShell> {
             _Section.cashbackSettings,
           ),
           if (isSuperAdmin) ...[
-            _navItem('Affiliate networks', Icons.hub_outlined, _Section.affiliate),
+            _navItem(
+              'Affiliate networks',
+              Icons.hub_outlined,
+              _Section.affiliate,
+            ),
             _navItem('Users', Icons.people_outline, _Section.users),
           ],
           const Spacer(),
-          if (email != null)
-            Padding(
-              padding: const EdgeInsets.all(AdminSpacing.lg),
-              child: Text(
-                email,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AdminColors.textMuted, fontSize: 12),
-              ),
-            ),
+          const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AdminSpacing.lg,
-              0,
-              AdminSpacing.lg,
-              AdminSpacing.lg,
-            ),
-            child: OutlinedButton.icon(
-              onPressed: () => AdminSession.instance.logout(),
-              icon: const Icon(Icons.logout, size: 16),
-              label: const Text('Sign out'),
+            padding: const EdgeInsets.all(AdminSpacing.lg),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AdminColors.bgSecondary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 16,
+                    color: AdminColors.primary,
+                  ),
+                ),
+                const SizedBox(width: AdminSpacing.sm),
+                Expanded(
+                  child: Text(
+                    email ?? '',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AdminColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => AdminSession.instance.logout(),
+                  icon: const Icon(Icons.logout, size: 17),
+                  color: AdminColors.textMuted,
+                  tooltip: 'Sign out',
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ),
           ),
         ],
@@ -126,32 +179,58 @@ class _AdminShellState extends State<AdminShell> {
   Widget _navItem(String label, IconData icon, _Section section) {
     final selected = _section == section;
 
-    return Material(
-      color: selected ? AdminColors.bgSecondary : Colors.transparent,
-      child: InkWell(
-        onTap: () => _goTo(section),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AdminSpacing.lg,
-            vertical: AdminSpacing.md,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: selected ? AdminColors.primary : AdminColors.textSecondary,
-              ),
-              const SizedBox(width: AdminSpacing.sm),
-              Text(
-                label,
-                style: TextStyle(
-                  color: selected ? AdminColors.primary : AdminColors.textSecondary,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 13,
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AdminSpacing.sm,
+        vertical: 1,
+      ),
+      child: Material(
+        color: selected
+            ? AdminColors.primary.withValues(alpha: 0.08)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(AdminRadius.input),
+        child: InkWell(
+          onTap: () => _goTo(section),
+          borderRadius: BorderRadius.circular(AdminRadius.input),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AdminSpacing.md,
+              vertical: 10,
+            ),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 3,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: selected ? AdminColors.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: AdminSpacing.sm),
+                Icon(
+                  icon,
+                  size: 19,
+                  color: selected
+                      ? AdminColors.primary
+                      : AdminColors.textSecondary,
+                ),
+                const SizedBox(width: AdminSpacing.sm),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: selected
+                          ? AdminColors.primary
+                          : AdminColors.textSecondary,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -38,9 +38,13 @@ class AdminAffiliateApiService {
     return AdminAffiliateNetwork.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<List<AdminStoreAffiliateMapping>> listMappings({String? storeId}) async {
+  Future<List<AdminStoreAffiliateMapping>> listMappings({
+    String? storeId,
+  }) async {
     final query = storeId == null ? '' : '?storeId=$storeId';
-    final json = await _client.getJson('/api/admin/store-affiliate-mappings$query');
+    final json = await _client.getJson(
+      '/api/admin/store-affiliate-mappings$query',
+    );
     return (json as List)
         .whereType<Map<String, dynamic>>()
         .map(AdminStoreAffiliateMapping.fromJson)

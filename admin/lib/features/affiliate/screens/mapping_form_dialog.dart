@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/spaced_column.dart';
 import '../../stores/models/admin_store.dart';
 import '../models/admin_affiliate_network.dart';
 
@@ -55,12 +56,15 @@ class _MappingFormDialog extends StatefulWidget {
 
 class _MappingFormDialogState extends State<_MappingFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final _externalIdController =
-      TextEditingController(text: widget.existing?.externalMerchantId);
-  late final _externalNameController =
-      TextEditingController(text: widget.existing?.externalMerchantName);
-  late final _merchantUrlController =
-      TextEditingController(text: widget.existing?.merchantUrl);
+  late final _externalIdController = TextEditingController(
+    text: widget.existing?.externalMerchantId,
+  );
+  late final _externalNameController = TextEditingController(
+    text: widget.existing?.externalMerchantName,
+  );
+  late final _merchantUrlController = TextEditingController(
+    text: widget.existing?.merchantUrl,
+  );
   late bool _isActive = widget.existing?.isActive ?? true;
 
   String? _storeId;
@@ -106,7 +110,7 @@ class _MappingFormDialogState extends State<_MappingFormDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: withGaps([
               if (_isEdit) ...[
                 Align(
                   alignment: Alignment.centerLeft,
@@ -115,22 +119,29 @@ class _MappingFormDialogState extends State<_MappingFormDialog> {
                     '${widget.existing!.affiliateNetworkName}',
                   ),
                 ),
-                const SizedBox(height: 12),
               ] else ...[
                 DropdownButtonFormField<String>(
                   initialValue: _storeId,
                   decoration: const InputDecoration(labelText: 'Store'),
                   items: widget.stores
-                      .map((s) => DropdownMenuItem(value: s.id, child: Text(s.name)))
+                      .map(
+                        (s) =>
+                            DropdownMenuItem(value: s.id, child: Text(s.name)),
+                      )
                       .toList(),
                   onChanged: (value) => setState(() => _storeId = value),
                   validator: (value) => value == null ? 'Required' : null,
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: _networkId,
-                  decoration: const InputDecoration(labelText: 'Affiliate network'),
+                  decoration: const InputDecoration(
+                    labelText: 'Affiliate network',
+                  ),
                   items: widget.networks
-                      .map((n) => DropdownMenuItem(value: n.id, child: Text(n.name)))
+                      .map(
+                        (n) =>
+                            DropdownMenuItem(value: n.id, child: Text(n.name)),
+                      )
                       .toList(),
                   onChanged: (value) => setState(() => _networkId = value),
                   validator: (value) => value == null ? 'Required' : null,
@@ -142,11 +153,14 @@ class _MappingFormDialogState extends State<_MappingFormDialog> {
                   labelText: 'External merchant id',
                   helperText: "The network's own id for this store",
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               TextFormField(
                 controller: _externalNameController,
-                decoration: const InputDecoration(labelText: 'External merchant name'),
+                decoration: const InputDecoration(
+                  labelText: 'External merchant name',
+                ),
               ),
               TextFormField(
                 controller: _merchantUrlController,
@@ -159,7 +173,7 @@ class _MappingFormDialogState extends State<_MappingFormDialog> {
                   value: _isActive,
                   onChanged: (v) => setState(() => _isActive = v),
                 ),
-            ],
+            ]),
           ),
         ),
       ),

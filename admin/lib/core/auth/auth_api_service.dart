@@ -23,7 +23,9 @@ class AuthApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(_extractErrorMessage(response, 'Invalid email or password.'));
+      throw Exception(
+        _extractErrorMessage(response, 'Invalid email or password.'),
+      );
     }
 
     final decoded = jsonDecode(response.body);
@@ -42,7 +44,9 @@ class AuthApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Token refresh failed with status ${response.statusCode}.');
+      throw Exception(
+        'Token refresh failed with status ${response.statusCode}.',
+      );
     }
 
     final decoded = jsonDecode(response.body);

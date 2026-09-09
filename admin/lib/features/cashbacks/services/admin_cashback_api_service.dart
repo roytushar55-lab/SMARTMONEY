@@ -24,20 +24,23 @@ class AdminCashbackApiService {
   }
 
   Future<CashbackDecision> approve(String cashbackId) async {
-    final json = await _client
-        .postJson('/api/admin/cashbacks/$cashbackId/approve');
+    final json = await _client.postJson(
+      '/api/admin/cashbacks/$cashbackId/approve',
+    );
     return CashbackDecision.fromJson(json as Map<String, dynamic>);
   }
 
   Future<CashbackDecision> reject(String cashbackId) async {
-    final json = await _client
-        .postJson('/api/admin/cashbacks/$cashbackId/reject');
+    final json = await _client.postJson(
+      '/api/admin/cashbacks/$cashbackId/reject',
+    );
     return CashbackDecision.fromJson(json as Map<String, dynamic>);
   }
 
   Future<CashbackDecision> reverse(String cashbackId) async {
-    final json = await _client
-        .postJson('/api/admin/cashbacks/$cashbackId/reverse');
+    final json = await _client.postJson(
+      '/api/admin/cashbacks/$cashbackId/reverse',
+    );
     return CashbackDecision.fromJson(json as Map<String, dynamic>);
   }
 

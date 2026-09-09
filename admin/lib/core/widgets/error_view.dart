@@ -61,8 +61,10 @@ class ErrorView extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: AdminColors.primary,
                   foregroundColor: AdminColors.onPrimary,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AdminRadius.button),
                   ),

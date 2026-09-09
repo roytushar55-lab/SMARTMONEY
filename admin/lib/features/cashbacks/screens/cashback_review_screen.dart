@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
+import '../../../core/widgets/admin_page_header.dart';
+import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_table_card.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -51,7 +54,10 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
     setState(() => _state = ViewState.loading);
 
     try {
-      final page = await _service.list(status: _statusFilter, page: _pageNumber);
+      final page = await _service.list(
+        status: _statusFilter,
+        page: _pageNumber,
+      );
       setState(() {
         _page = page;
         _state = page.items.isEmpty ? ViewState.empty : ViewState.success;
@@ -144,18 +150,14 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
+    return AdminPageScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Cashback review',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AdminColors.textPrimary,
-            ),
+          const AdminPageHeader(
+            title: 'Cashback review',
+            description:
+                'Approve, reject, or reverse cashback awaiting a decision.',
           ),
           const SizedBox(height: AdminSpacing.lg),
           _buildFilterBar(),
@@ -174,6 +176,23 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
           ChoiceChip(
             label: Text(CashbackStatusCopy.forStatus(status).label),
             selected: _statusFilter == status,
+            selectedColor: CashbackStatusCopy.forStatus(
+              status,
+            ).color.withValues(alpha: 0.14),
+            labelStyle: TextStyle(
+              color: _statusFilter == status
+                  ? CashbackStatusCopy.forStatus(status).color
+                  : AdminColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+            side: BorderSide(
+              color: _statusFilter == status
+                  ? CashbackStatusCopy.forStatus(
+                      status,
+                    ).color.withValues(alpha: 0.4)
+                  : AdminColors.border,
+            ),
+            showCheckmark: false,
             onSelected: (_) => _changeFilter(status),
           ),
       ],
@@ -201,21 +220,18 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('User')),
-                  DataColumn(label: Text('Store')),
-                  DataColumn(label: Text('Amount')),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('Network status')),
-                  DataColumn(label: Text('Created')),
-                  DataColumn(label: Text('Actions')),
-                ],
-                rows: page.items.map(_buildRow).toList(),
-              ),
+          child: AdminTableCard(
+            child: DataTable(
+              columns: const [
+                DataColumn(label: Text('User')),
+                DataColumn(label: Text('Store')),
+                DataColumn(label: Text('Amount')),
+                DataColumn(label: Text('Status')),
+                DataColumn(label: Text('Network status')),
+                DataColumn(label: Text('Created')),
+                DataColumn(label: Text('Actions')),
+              ],
+              rows: page.items.map(_buildRow).toList(),
             ),
           ),
         ),
@@ -233,7 +249,15 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
       cells: [
         DataCell(Text(cashback.userEmail)),
         DataCell(Text(cashback.storeName ?? '—')),
-        DataCell(Text('₹${cashback.cashbackAmount.toStringAsFixed(2)}')),
+        DataCell(
+          Text(
+            '₹${cashback.cashbackAmount.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontFeatures: [FontFeature.tabularFigures()],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
         DataCell(StatusBadge(label: statusCopy.label, color: statusCopy.color)),
         DataCell(Text(cashback.networkStatus)),
         DataCell(Text(_formatDate(cashback.createdAt))),
@@ -244,7 +268,8 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
 
   Widget _buildActions(AdminCashback cashback) {
     final canDecide =
-        cashback.status == 'Pending' || cashback.status == 'AwaitingAdminReview';
+        cashback.status == 'Pending' ||
+        cashback.status == 'AwaitingAdminReview';
 
     if (!canDecide) {
       return const Text('—', style: TextStyle(color: AdminColors.textMuted));
@@ -253,10 +278,20 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextButton(
+        FilledButton(
           onPressed: () => _approve(cashback),
+          style: FilledButton.styleFrom(
+            backgroundColor: AdminColors.success,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            minimumSize: Size.zero,
+            textStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           child: const Text('Approve'),
         ),
+        const SizedBox(width: AdminSpacing.xs),
         if (cashback.wasPreviouslyConfirmed)
           TextButton(
             onPressed: () => _reverse(cashback),
@@ -274,7 +309,10 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
   }
 
   Widget _buildPager(AdminCashbackPage page) {
-    final totalPages = (page.totalCount / page.pageSize).ceil().clamp(1, 999999);
+    final totalPages = (page.totalCount / page.pageSize).ceil().clamp(
+      1,
+      999999,
+    );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,

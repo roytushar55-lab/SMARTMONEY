@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
+import '../../../core/widgets/admin_page_header.dart';
+import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_table_card.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -133,28 +136,18 @@ class _StoresScreenState extends State<StoresScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
+    return AdminPageScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Stores',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AdminColors.textPrimary,
-                ),
-              ),
-              FilledButton.icon(
-                onPressed: _create,
-                icon: const Icon(Icons.add),
-                label: const Text('New store'),
-              ),
-            ],
+          AdminPageHeader(
+            title: 'Stores',
+            description: 'Manage the merchants users can earn cashback with.',
+            action: FilledButton.icon(
+              onPressed: _create,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('New store'),
+            ),
           ),
           const SizedBox(height: AdminSpacing.lg),
           Expanded(child: _buildBody()),
@@ -173,8 +166,7 @@ class _StoresScreenState extends State<StoresScreen> {
       case ViewState.empty:
         return const EmptyView(message: 'No stores yet.');
       case ViewState.success:
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        return AdminTableCard(
           child: DataTable(
             columns: const [
               DataColumn(label: Text('Name')),
@@ -191,13 +183,15 @@ class _StoresScreenState extends State<StoresScreen> {
                       DataCell(Text(store.name)),
                       DataCell(Text(store.slug)),
                       DataCell(Text(_categoryNames(store))),
-                      DataCell(Icon(
-                        store.isFeatured ? Icons.star : Icons.star_border,
-                        size: 18,
-                        color: store.isFeatured
-                            ? AdminColors.warning
-                            : AdminColors.textMuted,
-                      )),
+                      DataCell(
+                        Icon(
+                          store.isFeatured ? Icons.star : Icons.star_border,
+                          size: 18,
+                          color: store.isFeatured
+                              ? AdminColors.warning
+                              : AdminColors.textMuted,
+                        ),
+                      ),
                       DataCell(StatusBadge.active(store.isActive)),
                       DataCell(
                         TextButton(

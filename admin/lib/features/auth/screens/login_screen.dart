@@ -64,6 +64,13 @@ class _LoginScreenState extends State<LoginScreen> {
               color: AdminColors.surface,
               borderRadius: BorderRadius.circular(AdminRadius.card),
               border: Border.all(color: AdminColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: AdminColors.primary.withValues(alpha: 0.06),
+                  blurRadius: 32,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
             child: Form(
               key: _formKey,
@@ -71,18 +78,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AdminColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'S',
+                      style: TextStyle(
+                        color: AdminColors.onPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AdminSpacing.lg),
                   const Text(
                     'SmartMoney Admin',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: AdminColors.textPrimary,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Sign in with your Admin or SuperAdmin account.',
-                    style: TextStyle(color: AdminColors.textMuted, fontSize: 13),
+                    style: TextStyle(
+                      color: AdminColors.textMuted,
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: AdminSpacing.xxl),
                   TextFormField(
@@ -100,8 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: const InputDecoration(labelText: 'Password'),
                     obscureText: true,
                     onFieldSubmitted: (_) => _submit(),
-                    validator: (value) =>
-                        (value == null || value.isEmpty)
+                    validator: (value) => (value == null || value.isEmpty)
                         ? 'Password is required'
                         : null,
                   ),
@@ -109,7 +137,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: AdminSpacing.md),
                     Text(
                       _errorMessage!,
-                      style: const TextStyle(color: AdminColors.danger, fontSize: 13),
+                      style: const TextStyle(
+                        color: AdminColors.danger,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                   const SizedBox(height: AdminSpacing.xxl),

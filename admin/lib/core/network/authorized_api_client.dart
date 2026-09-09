@@ -77,7 +77,10 @@ class AuthorizedApiClient {
   dynamic _decode(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
-        _extractErrorMessage(response, 'Something went wrong. Please try again.'),
+        _extractErrorMessage(
+          response,
+          'Something went wrong. Please try again.',
+        ),
         statusCode: response.statusCode,
       );
     }

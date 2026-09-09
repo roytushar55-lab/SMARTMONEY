@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/spaced_column.dart';
 import '../models/admin_affiliate_network.dart';
 
 class NetworkFormResult {
-  const NetworkFormResult({required this.name, required this.code, required this.isActive});
+  const NetworkFormResult({
+    required this.name,
+    required this.code,
+    required this.isActive,
+  });
 
   final String name;
   final String code;
@@ -31,8 +36,12 @@ class _NetworkFormDialog extends StatefulWidget {
 
 class _NetworkFormDialogState extends State<_NetworkFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final _nameController = TextEditingController(text: widget.existing?.name);
-  late final _codeController = TextEditingController(text: widget.existing?.code);
+  late final _nameController = TextEditingController(
+    text: widget.existing?.name,
+  );
+  late final _codeController = TextEditingController(
+    text: widget.existing?.code,
+  );
   late bool _isActive = widget.existing?.isActive ?? true;
 
   @override
@@ -64,11 +73,12 @@ class _NetworkFormDialogState extends State<_NetworkFormDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: withGaps([
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Name'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               TextFormField(
                 controller: _codeController,
@@ -76,7 +86,8 @@ class _NetworkFormDialogState extends State<_NetworkFormDialog> {
                   labelText: 'Code',
                   helperText: 'Must match what the provider sends in webhooks',
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               if (isEdit)
                 SwitchListTile(
@@ -85,7 +96,7 @@ class _NetworkFormDialogState extends State<_NetworkFormDialog> {
                   value: _isActive,
                   onChanged: (v) => setState(() => _isActive = v),
                 ),
-            ],
+            ]),
           ),
         ),
       ),

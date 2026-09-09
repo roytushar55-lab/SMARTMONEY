@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/image_upload_field.dart';
+import '../../../core/widgets/spaced_column.dart';
 import '../../stores/models/admin_store.dart';
 import '../models/admin_offer.dart';
 
@@ -30,32 +31,47 @@ class _OfferFormDialog extends StatefulWidget {
 
 class _OfferFormDialogState extends State<_OfferFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final _titleController = TextEditingController(text: widget.existing?.title);
-  late final _slugController = TextEditingController(text: widget.existing?.slug);
-  late final _shortDescController =
-      TextEditingController(text: widget.existing?.shortDescription);
-  late final _descController = TextEditingController(text: widget.existing?.description);
-  late final _termsController =
-      TextEditingController(text: widget.existing?.termsAndConditions);
-  late final _imageUrlController = TextEditingController(text: widget.existing?.imageUrl);
+  late final _titleController = TextEditingController(
+    text: widget.existing?.title,
+  );
+  late final _slugController = TextEditingController(
+    text: widget.existing?.slug,
+  );
+  late final _shortDescController = TextEditingController(
+    text: widget.existing?.shortDescription,
+  );
+  late final _descController = TextEditingController(
+    text: widget.existing?.description,
+  );
+  late final _termsController = TextEditingController(
+    text: widget.existing?.termsAndConditions,
+  );
+  late final _imageUrlController = TextEditingController(
+    text: widget.existing?.imageUrl,
+  );
   late final _cashbackValueController = TextEditingController(
     text: widget.existing?.cashbackValue?.toString(),
   );
-  late final _cashbackTextController =
-      TextEditingController(text: widget.existing?.cashbackText);
-  late final _couponCodeController =
-      TextEditingController(text: widget.existing?.couponCode);
-  late final _destinationUrlController =
-      TextEditingController(text: widget.existing?.destinationUrl);
+  late final _cashbackTextController = TextEditingController(
+    text: widget.existing?.cashbackText,
+  );
+  late final _couponCodeController = TextEditingController(
+    text: widget.existing?.couponCode,
+  );
+  late final _destinationUrlController = TextEditingController(
+    text: widget.existing?.destinationUrl,
+  );
   late final _priorityController = TextEditingController(
     text: '${widget.existing?.priority ?? 0}',
   );
 
-  late String? _storeId = widget.existing?.storeId ?? widget.stores.firstOrNull?.id;
+  late String? _storeId =
+      widget.existing?.storeId ?? widget.stores.firstOrNull?.id;
   late String _offerType = kOfferTypes.contains(widget.existing?.offerType)
       ? widget.existing!.offerType
       : kOfferTypes.first;
-  late String _cashbackType = kCashbackTypes.contains(widget.existing?.cashbackType)
+  late String _cashbackType =
+      kCashbackTypes.contains(widget.existing?.cashbackType)
       ? widget.existing!.cashbackType
       : kCashbackTypes.last;
   late bool _isFeatured = widget.existing?.isFeatured ?? false;
@@ -87,7 +103,9 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
       if (!_isEdit) 'storeId': _storeId,
       'title': _titleController.text.trim(),
       if (_isEdit || _slugController.text.trim().isNotEmpty)
-        'slug': _slugController.text.trim().isEmpty ? null : _slugController.text.trim(),
+        'slug': _slugController.text.trim().isEmpty
+            ? null
+            : _slugController.text.trim(),
       'offerType': _offerType,
       'shortDescription': _emptyToNull(_shortDescController.text),
       'description': _emptyToNull(_descController.text),
@@ -109,7 +127,8 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
     Navigator.of(context).pop(body);
   }
 
-  String? _emptyToNull(String value) => value.trim().isEmpty ? null : value.trim();
+  String? _emptyToNull(String value) =>
+      value.trim().isEmpty ? null : value.trim();
 
   @override
   Widget build(BuildContext context) {
@@ -122,13 +141,18 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: withGaps([
                 if (!_isEdit)
                   DropdownButtonFormField<String>(
                     initialValue: _storeId,
                     decoration: const InputDecoration(labelText: 'Store'),
                     items: widget.stores
-                        .map((s) => DropdownMenuItem(value: s.id, child: Text(s.name)))
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.name),
+                          ),
+                        )
                         .toList(),
                     onChanged: (value) => setState(() => _storeId = value),
                     validator: (value) => value == null ? 'Required' : null,
@@ -144,7 +168,8 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(labelText: 'Title'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: _slugController,
@@ -152,8 +177,9 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
                     labelText: 'Slug',
                     hintText: _isEdit ? null : 'Leave blank to auto-generate',
                   ),
-                  validator: (v) =>
-                      _isEdit && (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  validator: (v) => _isEdit && (v == null || v.trim().isEmpty)
+                      ? 'Required'
+                      : null,
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: _offerType,
@@ -165,12 +191,17 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
                 ),
                 TextFormField(
                   controller: _destinationUrlController,
-                  decoration: const InputDecoration(labelText: 'Destination URL'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Destination URL',
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: _shortDescController,
-                  decoration: const InputDecoration(labelText: 'Short description'),
+                  decoration: const InputDecoration(
+                    labelText: 'Short description',
+                  ),
                 ),
                 TextFormField(
                   controller: _descController,
@@ -179,16 +210,16 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
                 ),
                 TextFormField(
                   controller: _termsController,
-                  decoration: const InputDecoration(labelText: 'Terms & conditions'),
+                  decoration: const InputDecoration(
+                    labelText: 'Terms & conditions',
+                  ),
                   maxLines: 2,
                 ),
-                const SizedBox(height: AdminSpacing.sm),
                 ImageUploadField(
                   controller: _imageUrlController,
                   label: 'Image URL',
                   folder: 'offers',
                 ),
-                const SizedBox(height: AdminSpacing.sm),
                 DropdownButtonFormField<String>(
                   initialValue: _cashbackType,
                   decoration: const InputDecoration(labelText: 'Cashback type'),
@@ -199,8 +230,12 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
                 ),
                 TextFormField(
                   controller: _cashbackValueController,
-                  decoration: const InputDecoration(labelText: 'Cashback value'),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Cashback value',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 TextFormField(
                   controller: _cashbackTextController,
@@ -228,7 +263,7 @@ class _OfferFormDialogState extends State<_OfferFormDialog> {
                     value: _isActive,
                     onChanged: (v) => setState(() => _isActive = v),
                   ),
-              ],
+              ]),
             ),
           ),
         ),

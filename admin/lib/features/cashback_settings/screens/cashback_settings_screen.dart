@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
+import '../../../core/widgets/admin_page_header.dart';
+import '../../../core/widgets/admin_page_scaffold.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -94,18 +96,14 @@ class _CashbackSettingsScreenState extends State<CashbackSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
+    return AdminPageScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Cashback settings',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AdminColors.textPrimary,
-            ),
+          const AdminPageHeader(
+            title: 'Cashback settings',
+            description:
+                'The share of commission users earn, and how long it takes to confirm.',
           ),
           const SizedBox(height: AdminSpacing.lg),
           Expanded(child: _buildBody()),
@@ -129,63 +127,73 @@ class _CashbackSettingsScreenState extends State<CashbackSettingsScreen> {
 
   Widget _buildForm() {
     return SizedBox(
-      width: 380,
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              controller: _shareController,
-              decoration: const InputDecoration(
-                labelText: 'User share percent',
-                suffixText: '%',
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                final parsed = double.tryParse(value?.trim() ?? '');
-                if (parsed == null || parsed <= 0 || parsed > 100) {
-                  return 'Enter a value between 0 and 100';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AdminSpacing.md),
-            TextFormField(
-              controller: _windowController,
-              decoration: const InputDecoration(
-                labelText: 'Confirmation window',
-                suffixText: 'days',
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                final parsed = int.tryParse(value?.trim() ?? '');
-                if (parsed == null || parsed <= 0) {
-                  return 'Enter a positive number of days';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AdminSpacing.lg),
-            if (_updatedAt != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AdminSpacing.md),
-                child: Text(
-                  'Last updated: $_updatedAt',
-                  style: const TextStyle(color: AdminColors.textMuted, fontSize: 12),
+      width: 400,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AdminSpacing.xxl),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  controller: _shareController,
+                  decoration: const InputDecoration(
+                    labelText: 'User share percent',
+                    suffixText: '%',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (value) {
+                    final parsed = double.tryParse(value?.trim() ?? '');
+                    if (parsed == null || parsed <= 0 || parsed > 100) {
+                      return 'Enter a value between 0 and 100';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Save'),
+                const SizedBox(height: AdminSpacing.md),
+                TextFormField(
+                  controller: _windowController,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirmation window',
+                    suffixText: 'days',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    final parsed = int.tryParse(value?.trim() ?? '');
+                    if (parsed == null || parsed <= 0) {
+                      return 'Enter a positive number of days';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AdminSpacing.lg),
+                if (_updatedAt != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AdminSpacing.md),
+                    child: Text(
+                      'Last updated: $_updatedAt',
+                      style: const TextStyle(
+                        color: AdminColors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                FilledButton(
+                  onPressed: _saving ? null : _save,
+                  child: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save'),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

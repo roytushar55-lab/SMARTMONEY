@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/spaced_column.dart';
 import '../models/admin_category.dart';
 
 class CategoryFormResult {
@@ -44,14 +45,18 @@ class _CategoryFormDialog extends StatefulWidget {
 
 class _CategoryFormDialogState extends State<_CategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late final _nameController =
-      TextEditingController(text: widget.existing?.name);
-  late final _slugController =
-      TextEditingController(text: widget.existing?.slug);
-  late final _descriptionController =
-      TextEditingController(text: widget.existing?.description);
-  late final _iconUrlController =
-      TextEditingController(text: widget.existing?.iconUrl);
+  late final _nameController = TextEditingController(
+    text: widget.existing?.name,
+  );
+  late final _slugController = TextEditingController(
+    text: widget.existing?.slug,
+  );
+  late final _descriptionController = TextEditingController(
+    text: widget.existing?.description,
+  );
+  late final _iconUrlController = TextEditingController(
+    text: widget.existing?.iconUrl,
+  );
   late final _displayOrderController = TextEditingController(
     text: '${widget.existing?.displayOrder ?? 0}',
   );
@@ -100,12 +105,11 @@ class _CategoryFormDialogState extends State<_CategoryFormDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: withGaps([
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty)
+                validator: (value) => (value == null || value.trim().isEmpty)
                     ? 'Name is required'
                     : null,
               ),
@@ -115,7 +119,8 @@ class _CategoryFormDialogState extends State<_CategoryFormDialog> {
                   labelText: 'Slug',
                   hintText: _isEdit ? null : 'Leave blank to auto-generate',
                 ),
-                validator: (value) => _isEdit && (value == null || value.trim().isEmpty)
+                validator: (value) =>
+                    _isEdit && (value == null || value.trim().isEmpty)
                     ? 'Slug is required'
                     : null,
               ),
@@ -140,7 +145,7 @@ class _CategoryFormDialogState extends State<_CategoryFormDialog> {
                   value: _isActive,
                   onChanged: (value) => setState(() => _isActive = value),
                 ),
-            ],
+            ]),
           ),
         ),
       ),

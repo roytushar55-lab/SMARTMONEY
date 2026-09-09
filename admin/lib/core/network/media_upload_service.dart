@@ -34,27 +34,24 @@ class MediaUploadService {
   }) async {
     final token = await _tokenStorageService.getAccessToken();
     if (token == null || token.isEmpty) {
-      throw const ApiException(
-        'Sign in to continue.',
-        statusCode: 401,
-      );
+      throw const ApiException('Sign in to continue.', statusCode: 401);
     }
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$baseUrl/api/admin/media/upload'),
-    )
-      ..headers['Authorization'] = 'Bearer $token'
-      ..fields['folder'] = folder
-      ..files.add(
-        http.MultipartFile.fromBytes(
-          'file',
-          bytes,
-          filename: fileName,
-          contentType: _parseContentType(contentType),
-        ),
-      );
-
+    final request =
+        http.MultipartRequest(
+            'POST',
+            Uri.parse('$baseUrl/api/admin/media/upload'),
+          )
+          ..headers['Authorization'] = 'Bearer $token'
+          ..fields['folder'] = folder
+          ..files.add(
+            http.MultipartFile.fromBytes(
+              'file',
+              bytes,
+              filename: fileName,
+              contentType: _parseContentType(contentType),
+            ),
+          );
 
     final streamed = await _client.send(request);
     final response = await http.Response.fromStream(streamed);

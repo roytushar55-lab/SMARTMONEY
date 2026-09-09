@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/auth/admin_session.dart';
 import 'core/auth/jwt_claims.dart';
 import 'core/theme/admin_colors.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/shell/admin_shell.dart';
 
@@ -18,17 +19,7 @@ class SmartMoneyAdminApp extends StatelessWidget {
     return MaterialApp(
       title: 'SmartMoney Admin',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AdminColors.primary,
-          primary: AdminColors.primary,
-        ),
-        scaffoldBackgroundColor: AdminColors.bgPrimary,
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-      ),
+      theme: buildAdminTheme(),
       home: const _SessionGate(),
     );
   }

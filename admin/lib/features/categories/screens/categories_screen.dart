@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
+import '../../../core/widgets/admin_page_header.dart';
+import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_table_card.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -100,28 +103,19 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
+    return AdminPageScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Categories',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AdminColors.textPrimary,
-                ),
-              ),
-              FilledButton.icon(
-                onPressed: _create,
-                icon: const Icon(Icons.add),
-                label: const Text('New category'),
-              ),
-            ],
+          AdminPageHeader(
+            title: 'Categories',
+            description:
+                'Browse categories shown to users, and how stores are grouped.',
+            action: FilledButton.icon(
+              onPressed: _create,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('New category'),
+            ),
           ),
           const SizedBox(height: AdminSpacing.lg),
           Expanded(child: _buildBody()),
@@ -140,8 +134,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       case ViewState.empty:
         return const EmptyView(message: 'No categories yet.');
       case ViewState.success:
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        return AdminTableCard(
           child: DataTable(
             columns: const [
               DataColumn(label: Text('Name')),

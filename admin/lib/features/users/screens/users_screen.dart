@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/auth/admin_session.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
+import '../../../core/widgets/admin_page_header.dart';
+import '../../../core/widgets/admin_page_scaffold.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../models/admin_user_lookup.dart';
@@ -94,18 +96,14 @@ class _UsersScreenState extends State<UsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
+    return AdminPageScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Users',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AdminColors.textPrimary,
-            ),
+          const AdminPageHeader(
+            title: 'Users',
+            description:
+                'Look up a user by email to grant or revoke admin access.',
           ),
           const SizedBox(height: AdminSpacing.lg),
           _buildSearchBar(),
@@ -113,7 +111,10 @@ class _UsersScreenState extends State<UsersScreen> {
           if (_searching)
             const Center(child: CircularProgressIndicator())
           else if (_errorMessage != null)
-            Text(_errorMessage!, style: const TextStyle(color: AdminColors.danger))
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: AdminColors.danger),
+            )
           else if (_result != null)
             _buildResult(_result!)
           else if (_searched)
@@ -160,7 +161,10 @@ class _UsersScreenState extends State<UsersScreen> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
-            Text(user.email, style: const TextStyle(color: AdminColors.textMuted)),
+            Text(
+              user.email,
+              style: const TextStyle(color: AdminColors.textMuted),
+            ),
             const SizedBox(height: AdminSpacing.md),
             Row(
               children: [

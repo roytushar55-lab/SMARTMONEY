@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
+import '../../../core/widgets/admin_page_header.dart';
+import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_table_card.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -162,31 +165,33 @@ class _AffiliateScreenState extends State<AffiliateScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
+    return AdminPageScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Affiliate networks',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AdminColors.textPrimary,
-            ),
+          const AdminPageHeader(
+            title: 'Affiliate networks',
+            description:
+                'Providers and which merchant id maps each store to them.',
           ),
           const SizedBox(height: AdminSpacing.md),
           TabBar(
             controller: _tabController,
             isScrollable: true,
             labelColor: AdminColors.primary,
-            tabs: const [Tab(text: 'Networks'), Tab(text: 'Store mappings')],
+            tabs: const [
+              Tab(text: 'Networks'),
+              Tab(text: 'Store mappings'),
+            ],
           ),
           const SizedBox(height: AdminSpacing.lg),
           Expanded(
             child: switch (_state) {
               ViewState.initial || ViewState.loading => const LoadingView(),
-              ViewState.error => ErrorView(message: _errorMessage, onRetry: _load),
+              ViewState.error => ErrorView(
+                message: _errorMessage,
+                onRetry: _load,
+              ),
               _ => TabBarView(
                 controller: _tabController,
                 children: [_buildNetworksTab(), _buildMappingsTab()],
@@ -215,8 +220,7 @@ class _AffiliateScreenState extends State<AffiliateScreen>
           const EmptyView(message: 'No affiliate networks yet.')
         else
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            child: AdminTableCard(
               child: DataTable(
                 columns: const [
                   DataColumn(label: Text('Name')),
@@ -265,8 +269,7 @@ class _AffiliateScreenState extends State<AffiliateScreen>
           const EmptyView(message: 'No store mappings yet.')
         else
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            child: AdminTableCard(
               child: DataTable(
                 columns: const [
                   DataColumn(label: Text('Store')),

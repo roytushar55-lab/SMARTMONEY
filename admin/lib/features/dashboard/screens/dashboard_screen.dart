@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
+import '../../../core/widgets/admin_page_header.dart';
+import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_stat_card.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/view_state.dart';
@@ -28,6 +31,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ViewState _state = ViewState.initial;
   String _errorMessage = '';
   final Map<String, int> _counts = {};
+
+  static const Map<String, IconData> _statusIcons = {
+    'AwaitingAdminReview': Icons.hourglass_top_rounded,
+    'Pending': Icons.schedule_rounded,
+    'Confirmed': Icons.check_circle_outline_rounded,
+    'Rejected': Icons.cancel_outlined,
+    'Reversed': Icons.undo_rounded,
+    'PaidOut': Icons.account_balance_wallet_outlined,
+  };
 
   @override
   void initState() {
@@ -72,18 +84,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
+    return AdminPageScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Dashboard',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AdminColors.textPrimary,
-            ),
+          const AdminPageHeader(
+            title: 'Dashboard',
+            description:
+                'Cashback pipeline at a glance — tap a card to review.',
           ),
           const SizedBox(height: AdminSpacing.xxl),
           Expanded(child: _buildBody()),
@@ -114,39 +122,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildCard(String status, int count) {
     final copy = CashbackStatusCopy.forStatus(status);
 
-    return InkWell(
+    return AdminStatCard(
+      icon: _statusIcons[status] ?? Icons.circle_outlined,
+      value: '$count',
+      label: copy.label,
+      color: copy.color,
       onTap: () => widget.onOpenReviewQueue(status),
-      borderRadius: BorderRadius.circular(AdminRadius.card),
-      child: Container(
-        width: 200,
-        padding: const EdgeInsets.all(AdminSpacing.lg),
-        decoration: BoxDecoration(
-          color: AdminColors.surface,
-          borderRadius: BorderRadius.circular(AdminRadius.card),
-          border: Border.all(color: AdminColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(color: copy.color, shape: BoxShape.circle),
-            ),
-            const SizedBox(height: AdminSpacing.md),
-            Text(
-              '$count',
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: AdminColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(copy.label, style: const TextStyle(color: AdminColors.textMuted)),
-          ],
-        ),
-      ),
     );
   }
 }

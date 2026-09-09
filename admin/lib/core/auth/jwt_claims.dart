@@ -35,7 +35,8 @@ class JwtClaims {
 
   String? get userId => _claims['sub'] as String?;
 
-  String? get role => _claims[_roleClaimUri] as String? ?? _claims['role'] as String?;
+  String? get role =>
+      _claims[_roleClaimUri] as String? ?? _claims['role'] as String?;
 
   String? get email =>
       _claims[_emailClaimUri] as String? ?? _claims['email'] as String?;
