@@ -78,26 +78,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AdminColors.primary,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'S',
-                      style: TextStyle(
-                        color: AdminColors.onPrimary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22,
+                  Center(
+                    child: SizedBox(
+                      height: 72,
+                      child: Image.asset(
+                        'assets/images/smartmoney_logo.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
                   const SizedBox(height: AdminSpacing.lg),
                   const Text(
-                    'SmartMoney Admin',
+                    'Admin Panel',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
