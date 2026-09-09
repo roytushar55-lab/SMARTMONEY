@@ -69,34 +69,37 @@ class _NetworkFormDialogState extends State<_NetworkFormDialog> {
       title: Text(isEdit ? 'Edit affiliate network' : 'New affiliate network'),
       content: SizedBox(
         width: 380,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: withGaps([
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              TextFormField(
-                controller: _codeController,
-                decoration: const InputDecoration(
-                  labelText: 'Code',
-                  helperText: 'Must match what the provider sends in webhooks',
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: withGaps([
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              if (isEdit)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Active'),
-                  value: _isActive,
-                  onChanged: (v) => setState(() => _isActive = v),
+                TextFormField(
+                  controller: _codeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Code',
+                    helperText:
+                        'Must match what the provider sends in webhooks',
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-            ]),
+                if (isEdit)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Active'),
+                    value: _isActive,
+                    onChanged: (v) => setState(() => _isActive = v),
+                  ),
+              ]),
+            ),
           ),
         ),
       ),

@@ -101,51 +101,53 @@ class _CategoryFormDialogState extends State<_CategoryFormDialog> {
       title: Text(_isEdit ? 'Edit category' : 'New category'),
       content: SizedBox(
         width: 420,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: withGaps([
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Name is required'
-                    : null,
-              ),
-              TextFormField(
-                controller: _slugController,
-                decoration: InputDecoration(
-                  labelText: 'Slug',
-                  hintText: _isEdit ? null : 'Leave blank to auto-generate',
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: withGaps([
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Name is required'
+                      : null,
                 ),
-                validator: (value) =>
-                    _isEdit && (value == null || value.trim().isEmpty)
-                    ? 'Slug is required'
-                    : null,
-              ),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 2,
-              ),
-              TextFormField(
-                controller: _iconUrlController,
-                decoration: const InputDecoration(labelText: 'Icon URL'),
-              ),
-              TextFormField(
-                controller: _displayOrderController,
-                decoration: const InputDecoration(labelText: 'Display order'),
-                keyboardType: TextInputType.number,
-              ),
-              if (_isEdit)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Active'),
-                  value: _isActive,
-                  onChanged: (value) => setState(() => _isActive = value),
+                TextFormField(
+                  controller: _slugController,
+                  decoration: InputDecoration(
+                    labelText: 'Slug',
+                    hintText: _isEdit ? null : 'Leave blank to auto-generate',
+                  ),
+                  validator: (value) =>
+                      _isEdit && (value == null || value.trim().isEmpty)
+                      ? 'Slug is required'
+                      : null,
                 ),
-            ]),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(labelText: 'Description'),
+                  maxLines: 2,
+                ),
+                TextFormField(
+                  controller: _iconUrlController,
+                  decoration: const InputDecoration(labelText: 'Icon URL'),
+                ),
+                TextFormField(
+                  controller: _displayOrderController,
+                  decoration: const InputDecoration(labelText: 'Display order'),
+                  keyboardType: TextInputType.number,
+                ),
+                if (_isEdit)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Active'),
+                    value: _isActive,
+                    onChanged: (value) => setState(() => _isActive = value),
+                  ),
+              ]),
+            ),
           ),
         ),
       ),

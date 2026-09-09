@@ -106,74 +106,80 @@ class _MappingFormDialogState extends State<_MappingFormDialog> {
       title: Text(_isEdit ? 'Edit mapping' : 'New store-affiliate mapping'),
       content: SizedBox(
         width: 420,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: withGaps([
-              if (_isEdit) ...[
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '${widget.existing!.storeName} ↔ '
-                    '${widget.existing!.affiliateNetworkName}',
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: withGaps([
+                if (_isEdit) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${widget.existing!.storeName} ↔ '
+                      '${widget.existing!.affiliateNetworkName}',
+                    ),
                   ),
-                ),
-              ] else ...[
-                DropdownButtonFormField<String>(
-                  initialValue: _storeId,
-                  decoration: const InputDecoration(labelText: 'Store'),
-                  items: widget.stores
-                      .map(
-                        (s) =>
-                            DropdownMenuItem(value: s.id, child: Text(s.name)),
-                      )
-                      .toList(),
-                  onChanged: (value) => setState(() => _storeId = value),
-                  validator: (value) => value == null ? 'Required' : null,
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: _networkId,
+                ] else ...[
+                  DropdownButtonFormField<String>(
+                    initialValue: _storeId,
+                    decoration: const InputDecoration(labelText: 'Store'),
+                    items: widget.stores
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setState(() => _storeId = value),
+                    validator: (value) => value == null ? 'Required' : null,
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: _networkId,
+                    decoration: const InputDecoration(
+                      labelText: 'Affiliate network',
+                    ),
+                    items: widget.networks
+                        .map(
+                          (n) => DropdownMenuItem(
+                            value: n.id,
+                            child: Text(n.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setState(() => _networkId = value),
+                    validator: (value) => value == null ? 'Required' : null,
+                  ),
+                ],
+                TextFormField(
+                  controller: _externalIdController,
                   decoration: const InputDecoration(
-                    labelText: 'Affiliate network',
+                    labelText: 'External merchant id',
+                    helperText: "The network's own id for this store",
                   ),
-                  items: widget.networks
-                      .map(
-                        (n) =>
-                            DropdownMenuItem(value: n.id, child: Text(n.name)),
-                      )
-                      .toList(),
-                  onChanged: (value) => setState(() => _networkId = value),
-                  validator: (value) => value == null ? 'Required' : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
-              ],
-              TextFormField(
-                controller: _externalIdController,
-                decoration: const InputDecoration(
-                  labelText: 'External merchant id',
-                  helperText: "The network's own id for this store",
+                TextFormField(
+                  controller: _externalNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'External merchant name',
+                  ),
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              TextFormField(
-                controller: _externalNameController,
-                decoration: const InputDecoration(
-                  labelText: 'External merchant name',
+                TextFormField(
+                  controller: _merchantUrlController,
+                  decoration: const InputDecoration(labelText: 'Merchant URL'),
                 ),
-              ),
-              TextFormField(
-                controller: _merchantUrlController,
-                decoration: const InputDecoration(labelText: 'Merchant URL'),
-              ),
-              if (_isEdit)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Active'),
-                  value: _isActive,
-                  onChanged: (v) => setState(() => _isActive = v),
-                ),
-            ]),
+                if (_isEdit)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Active'),
+                    value: _isActive,
+                    onChanged: (v) => setState(() => _isActive = v),
+                  ),
+              ]),
+            ),
           ),
         ),
       ),
