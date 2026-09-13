@@ -4,6 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_search_status_bar.dart';
 import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
@@ -41,6 +42,14 @@ class _AffiliateScreenState extends State<AffiliateScreen>
   List<AdminStoreAffiliateMapping> _mappings = [];
   List<AdminStore> _stores = [];
 
+  final _mappingSearchController = TextEditingController();
+  String _mappingSearch = '';
+
+  /// null = no status toggle applied, true = "Active" chip selected, false =
+  /// "Inactive" chip selected. Both filters are applied client-side since
+  /// the full mapping list is already loaded.
+  bool? _mappingStatusFilter;
+
   @override
   void initState() {
     super.initState();
@@ -50,9 +59,58 @@ class _AffiliateScreenState extends State<AffiliateScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _mappingSearchController.dispose();
     _affiliateService.dispose();
     _storeService.dispose();
     super.dispose();
+  }
+
+  List<AdminStoreAffiliateMapping> get _filteredMappings {
+    Iterable<AdminStoreAffiliateMapping> result = _mappings;
+
+    if (_mappingStatusFilter != null) {
+      result = result.where((mapping) => mapping.isActive == _mappingStatusFilter);
+    }
+
+    if (_mappingSearch.isNotEmpty) {
+      final term = _mappingSearch.toLowerCase();
+      result = result.where(
+        (mapping) =>
+            mapping.storeName.toLowerCase().contains(term) ||
+            mapping.affiliateNetworkName.toLowerCase().contains(term) ||
+            mapping.externalMerchantId.toLowerCase().contains(term),
+      );
+    }
+
+    return result.toList();
+  }
+
+  void _onMappingSearchChanged(String value) {
+    setState(() => _mappingSearch = value.trim());
+  }
+
+  void _clearMappingSearch() {
+    _mappingSearchController.clear();
+    setState(() => _mappingSearch = '');
+  }
+
+  /// Tapping a selected chip clears the filter back to "all"; tapping the
+  /// other chip switches straight over.
+  void _toggleMappingStatusFilter(bool value) {
+    setState(() {
+      _mappingStatusFilter = _mappingStatusFilter == value ? null : value;
+    });
+  }
+
+  String _mappingEmptyMessage() {
+    final statusWord = switch (_mappingStatusFilter) {
+      true => 'active ',
+      false => 'inactive ',
+      null => '',
+    };
+
+    if (_mappingSearch.isEmpty) return 'No ${statusWord}store mappings found.';
+    return 'No ${statusWord}store mappings match "$_mappingSearch".';
   }
 
   Future<void> _load() async {
@@ -253,6 +311,8 @@ class _AffiliateScreenState extends State<AffiliateScreen>
   }
 
   Widget _buildMappingsTab() {
+    final filtered = _filteredMappings;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -265,8 +325,24 @@ class _AffiliateScreenState extends State<AffiliateScreen>
           ),
         ),
         const SizedBox(height: AdminSpacing.md),
+        AdminSearchStatusBar(
+          controller: _mappingSearchController,
+          onChanged: _onMappingSearchChanged,
+          onClear: _clearMappingSearch,
+          statusFilter: _mappingStatusFilter,
+          onStatusToggle: _toggleMappingStatusFilter,
+          hintText: 'Search store, network, merchant id…',
+        ),
+        const SizedBox(height: AdminSpacing.md),
         if (_mappings.isEmpty)
           const EmptyView(message: 'No store mappings yet.')
+        else if (filtered.isEmpty)
+          EmptyView(
+            icon: _mappingSearch.isEmpty
+                ? Icons.inbox_outlined
+                : Icons.search_off_rounded,
+            message: _mappingEmptyMessage(),
+          )
         else
           Expanded(
             child: AdminStickyTable(
@@ -285,9 +361,9 @@ class _AffiliateScreenState extends State<AffiliateScreen>
                 Alignment.center,
                 Alignment.centerLeft,
               ],
-              itemCount: _mappings.length,
+              itemCount: filtered.length,
               cellsBuilder: (context, index) {
-                final mapping = _mappings[index];
+                final mapping = filtered[index];
 
                 return [
                   Text(mapping.storeName),

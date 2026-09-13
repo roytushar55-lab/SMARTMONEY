@@ -9,9 +9,15 @@ public sealed class ListUsersQuery : IQuery<AdminUserListResponse>
 
     public int PageSize { get; }
 
-    public ListUsersQuery(int page, int pageSize)
+    public string? Search { get; }
+
+    public bool? IsActive { get; }
+
+    public ListUsersQuery(int page, int pageSize, string? search = null, bool? isActive = null)
     {
         Page = page;
         PageSize = pageSize;
+        Search = search;
+        IsActive = isActive;
     }
 }

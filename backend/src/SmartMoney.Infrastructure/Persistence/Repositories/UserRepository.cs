@@ -81,20 +81,79 @@ public sealed class UserRepository : IUserRepository
     public async Task<IReadOnlyList<User>> ListAsync(
         int page,
         int pageSize,
+        string? search = null,
+        bool? isActive = null,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Users
-            .AsNoTracking()
-            .Include(user => user.Role)
+        var query = ApplyFilters(
+            _context.Users.AsNoTracking().Include(user => user.Role),
+            search,
+            isActive);
+
+        return await query
             .OrderByDescending(user => user.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync(CancellationToken cancellationToken = default)
+    public Task<int> CountAsync(
+        string? search = null,
+        bool? isActive = null,
+        CancellationToken cancellationToken = default)
     {
-        return _context.Users.CountAsync(cancellationToken);
+        return ApplyFilters(_context.Users, search, isActive).CountAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Combines the free-text search with the explicit active/inactive
+    /// toggle: the status toggle narrows the whole result set first (an AND),
+    /// then the search term matches name, email, or a status word within
+    /// what's left (an OR) so e.g. the "Active" toggle plus "roy" finds only
+    /// active users named/emailed "roy".
+    /// </summary>
+    private static IQueryable<User> ApplyFilters(
+        IQueryable<User> query,
+        string? search,
+        bool? isActive)
+    {
+        if (isActive is not null)
+        {
+            query = query.Where(user => user.IsActive == isActive);
+        }
+
+        return ApplySearch(query, search);
+    }
+
+    /// <summary>
+    /// Matches full name or email substrings, plus a status word
+    /// ("active"/"inactive"/"disabled") once the term is long enough to be
+    /// unambiguous — short terms like "a" stay name/email-only.
+    /// </summary>
+    private static IQueryable<User> ApplySearch(IQueryable<User> query, string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return query;
+
+        string term = search.Trim();
+
+        bool? statusFilter = null;
+        if (term.Length >= 3)
+        {
+            string lower = term.ToLowerInvariant();
+            if ("inactive".Contains(lower) || "disabled".Contains(lower) || "deactivated".Contains(lower))
+            {
+                statusFilter = false;
+            }
+            else if ("active".StartsWith(lower))
+            {
+                statusFilter = true;
+            }
+        }
+
+        return query.Where(user =>
+            EF.Functions.ILike(user.FullName, $"%{term}%") ||
+            EF.Functions.ILike(user.Email, $"%{term}%") ||
+            (statusFilter != null && user.IsActive == statusFilter));
     }
 
     public Task<int> CountByActiveStatusAsync(

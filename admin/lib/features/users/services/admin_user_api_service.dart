@@ -10,10 +10,20 @@ class AdminUserApiService {
   final AuthorizedApiClient _client;
   final bool _ownsClient;
 
-  Future<AdminUserPage> listUsers({int page = 1, int pageSize = 20}) async {
-    final json = await _client.getJson(
-      '/api/admin/users?page=$page&pageSize=$pageSize',
-    );
+  Future<AdminUserPage> listUsers({
+    int page = 1,
+    int pageSize = 20,
+    String? search,
+    bool? isActive,
+  }) async {
+    final query = StringBuffer('/api/admin/users?page=$page&pageSize=$pageSize');
+    if (search != null && search.trim().isNotEmpty) {
+      query.write('&search=${Uri.encodeQueryComponent(search.trim())}');
+    }
+    if (isActive != null) {
+      query.write('&isActive=$isActive');
+    }
+    final json = await _client.getJson(query.toString());
     return AdminUserPage.fromJson(json as Map<String, dynamic>);
   }
 

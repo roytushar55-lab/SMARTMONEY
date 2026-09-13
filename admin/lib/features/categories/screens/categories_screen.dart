@@ -4,6 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_search_status_bar.dart';
 import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
@@ -29,6 +30,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   String _errorMessage = '';
   List<AdminCategory> _categories = [];
 
+  final _searchController = TextEditingController();
+  String _search = '';
+
+  /// null = no status toggle applied, true = "Active" chip selected, false =
+  /// "Inactive" chip selected. Both filters are applied client-side since
+  /// the full category list is already loaded.
+  bool? _statusFilter;
+
   @override
   void initState() {
     super.initState();
@@ -37,8 +46,54 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _service.dispose();
     super.dispose();
+  }
+
+  List<AdminCategory> get _filteredCategories {
+    Iterable<AdminCategory> result = _categories;
+
+    if (_statusFilter != null) {
+      result = result.where((category) => category.isActive == _statusFilter);
+    }
+
+    if (_search.isNotEmpty) {
+      final term = _search.toLowerCase();
+      result = result.where(
+        (category) =>
+            category.name.toLowerCase().contains(term) ||
+            category.slug.toLowerCase().contains(term),
+      );
+    }
+
+    return result.toList();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _search = value.trim());
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _search = '');
+  }
+
+  /// Tapping a selected chip clears the filter back to "all"; tapping the
+  /// other chip switches straight over.
+  void _toggleStatusFilter(bool value) {
+    setState(() => _statusFilter = _statusFilter == value ? null : value);
+  }
+
+  String _emptyMessage() {
+    final statusWord = switch (_statusFilter) {
+      true => 'active ',
+      false => 'inactive ',
+      null => '',
+    };
+
+    if (_search.isEmpty) return 'No ${statusWord}categories found.';
+    return 'No ${statusWord}categories match "$_search".';
   }
 
   Future<void> _load() async {
@@ -118,6 +173,15 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           ),
           const SizedBox(height: AdminSpacing.lg),
+          AdminSearchStatusBar(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            onClear: _clearSearch,
+            statusFilter: _statusFilter,
+            onStatusToggle: _toggleStatusFilter,
+            hintText: 'Search name, slug…',
+          ),
+          const SizedBox(height: AdminSpacing.md),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -134,6 +198,15 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       case ViewState.empty:
         return const EmptyView(message: 'No categories yet.');
       case ViewState.success:
+        final filtered = _filteredCategories;
+
+        if (filtered.isEmpty) {
+          return EmptyView(
+            icon: _search.isEmpty ? Icons.inbox_outlined : Icons.search_off_rounded,
+            message: _emptyMessage(),
+          );
+        }
+
         return AdminStickyTable(
           columns: const ['Name', 'Slug', 'Order', 'Status', ''],
           columnWidths: const [160, 160, 70, 100, 70],
@@ -144,9 +217,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             Alignment.center,
             Alignment.centerLeft,
           ],
-          itemCount: _categories.length,
+          itemCount: filtered.length,
           cellsBuilder: (context, index) {
-            final category = _categories[index];
+            final category = filtered[index];
 
             return [
               Text(category.name),

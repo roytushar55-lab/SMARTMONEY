@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
+import '../../../core/widgets/admin_search_status_bar.dart';
 import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -31,6 +34,15 @@ class _UsersScreenState extends State<UsersScreen> {
   AdminUserPage? _page;
   int _pageNumber = 1;
 
+  final _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _search = '';
+
+  /// null = no status toggle applied, true = "Active" chip selected, false =
+  /// "Inactive" chip selected. ANDed with [_search] server-side, so toggling
+  /// a status narrows whatever the search box already matches.
+  bool? _statusFilter;
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +51,8 @@ class _UsersScreenState extends State<UsersScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
     _service.dispose();
     super.dispose();
   }
@@ -47,7 +61,11 @@ class _UsersScreenState extends State<UsersScreen> {
     setState(() => _state = ViewState.loading);
 
     try {
-      final page = await _service.listUsers(page: _pageNumber);
+      final page = await _service.listUsers(
+        page: _pageNumber,
+        search: _search.isEmpty ? null : _search,
+        isActive: _statusFilter,
+      );
       setState(() {
         _page = page;
         _state = page.items.isEmpty ? ViewState.empty : ViewState.success;
@@ -62,6 +80,41 @@ class _UsersScreenState extends State<UsersScreen> {
 
   void _changePage(int delta) {
     setState(() => _pageNumber += delta);
+    _load();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      final trimmed = value.trim();
+      if (trimmed == _search) return;
+      setState(() {
+        _search = trimmed;
+        _pageNumber = 1;
+      });
+      _load();
+    });
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    if (_search.isEmpty) return;
+    setState(() {
+      _search = '';
+      _pageNumber = 1;
+    });
+    _load();
+  }
+
+  /// Tapping a selected chip clears the filter back to "all"; tapping the
+  /// other chip switches straight over.
+  void _toggleStatusFilter(bool value) {
+    setState(() {
+      _statusFilter = _statusFilter == value ? null : value;
+      _pageNumber = 1;
+    });
     _load();
   }
 
@@ -84,6 +137,14 @@ class _UsersScreenState extends State<UsersScreen> {
             description: 'All registered users.',
           ),
           const SizedBox(height: AdminSpacing.lg),
+          AdminSearchStatusBar(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            onClear: _clearSearch,
+            statusFilter: _statusFilter,
+            onStatusToggle: _toggleStatusFilter,
+          ),
+          const SizedBox(height: AdminSpacing.md),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -98,10 +159,24 @@ class _UsersScreenState extends State<UsersScreen> {
       case ViewState.error:
         return ErrorView(message: _errorMessage, onRetry: _load);
       case ViewState.empty:
-        return const EmptyView(message: 'No users found.');
+        return EmptyView(
+          icon: _search.isEmpty ? Icons.inbox_outlined : Icons.search_off_rounded,
+          message: _emptyMessage(),
+        );
       case ViewState.success:
         return _buildTable();
     }
+  }
+
+  String _emptyMessage() {
+    final statusWord = switch (_statusFilter) {
+      true => 'active ',
+      false => 'inactive ',
+      null => '',
+    };
+
+    if (_search.isEmpty) return 'No ${statusWord}users found.';
+    return 'No ${statusWord}users match "$_search".';
   }
 
   Widget _buildTable() {

@@ -48,10 +48,12 @@ public sealed class AdminUsersController : ControllerBase
     public async Task<ActionResult<AdminUserListResponse>> List(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? isActive = null,
         CancellationToken cancellationToken = default)
     {
         var response = await _listHandler.HandleAsync(
-            new ListUsersQuery(page, pageSize), cancellationToken);
+            new ListUsersQuery(page, pageSize, search, isActive), cancellationToken);
 
         return Ok(response);
     }

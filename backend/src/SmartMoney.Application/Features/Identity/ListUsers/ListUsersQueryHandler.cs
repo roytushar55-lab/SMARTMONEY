@@ -29,8 +29,10 @@ public sealed class ListUsersQueryHandler
             ? DefaultPageSize
             : Math.Min(query.PageSize, MaxPageSize);
 
-        var users = await _userRepository.ListAsync(page, pageSize, cancellationToken);
-        var totalCount = await _userRepository.CountAsync(cancellationToken);
+        var users = await _userRepository.ListAsync(
+            page, pageSize, query.Search, query.IsActive, cancellationToken);
+        var totalCount = await _userRepository.CountAsync(
+            query.Search, query.IsActive, cancellationToken);
 
         var items = users
             .Select(user => new AdminUserListItemResponse
