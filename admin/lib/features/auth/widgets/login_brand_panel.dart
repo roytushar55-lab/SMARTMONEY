@@ -48,63 +48,62 @@ class LoginBrandPanel extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(48, 56, 48, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const LoginBrandLockup(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Smarter insights.\nHappier users.',
+              // A scroll view rather than a fixed spaceBetween spread: on a
+              // short window the logo + stats card + trust badges can add up
+              // to more than the available height, and a rigid full-height
+              // Column has no way to shrink — it just overflows. Scrolling
+              // degrades gracefully instead.
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const LoginBrandLockup(),
+                    const SizedBox(height: 40),
+                    Text(
+                      'Smarter insights.\nHappier users.',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w800,
+                        height: 1.18,
+                        letterSpacing: -0.5,
+                        color: AdminColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: 340,
+                      child: Text(
+                        'Manage users, track performance, monitor cashback, '
+                        'and keep SmartMoney running smoothly.',
                         style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
-                          height: 1.18,
-                          letterSpacing: -0.5,
-                          color: AdminColors.textPrimary,
+                          fontSize: 15,
+                          height: 1.5,
+                          color: AdminColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: 340,
-                        child: Text(
-                          'Manage users, track performance, monitor cashback, '
-                          'and keep SmartMoney running smoothly.',
-                          style: TextStyle(
-                            fontSize: 15,
-                            height: 1.5,
-                            color: AdminColors.textSecondary,
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 32),
+                    const _StatsIllustrationCard(),
+                    const SizedBox(height: 40),
+                    const LoginTrustBadges(),
+                    const SizedBox(height: 14),
+                    Container(
+                      height: 1,
+                      width: 64,
+                      color: AdminColors.border,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Powering a smarter, rewarding tomorrow.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AdminColors.textMuted,
                       ),
-                      const SizedBox(height: 32),
-                      const _StatsIllustrationCard(),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const LoginTrustBadges(),
-                      const SizedBox(height: 14),
-                      Container(
-                        height: 1,
-                        width: 64,
-                        color: AdminColors.border,
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Powering a smarter, rewarding tomorrow.',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: AdminColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
