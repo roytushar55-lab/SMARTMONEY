@@ -4,7 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
-import '../../../core/widgets/admin_table_card.dart';
+import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -220,32 +220,32 @@ class _AffiliateScreenState extends State<AffiliateScreen>
           const EmptyView(message: 'No affiliate networks yet.')
         else
           Expanded(
-            child: AdminTableCard(
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Name')),
-                  DataColumn(label: Text('Code')),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('')),
-                ],
-                rows: _networks
-                    .map(
-                      (network) => DataRow(
-                        cells: [
-                          DataCell(Text(network.name)),
-                          DataCell(Text(network.code)),
-                          DataCell(StatusBadge.active(network.isActive)),
-                          DataCell(
-                            TextButton(
-                              onPressed: () => _editNetwork(network),
-                              child: const Text('Edit'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                    .toList(),
-              ),
+            child: AdminStickyTable(
+              columns: const ['Name', 'Code', 'Status', ''],
+              columnWidths: const [160, 120, 100, 70],
+              columnAlignments: const [
+                Alignment.centerLeft,
+                Alignment.centerLeft,
+                Alignment.center,
+                Alignment.centerLeft,
+              ],
+              itemCount: _networks.length,
+              cellsBuilder: (context, index) {
+                final network = _networks[index];
+
+                return [
+                  Text(network.name),
+                  Text(network.code),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: StatusBadge.active(network.isActive),
+                  ),
+                  TextButton(
+                    onPressed: () => _editNetwork(network),
+                    child: const Text('Edit'),
+                  ),
+                ];
+              },
             ),
           ),
       ],
@@ -269,34 +269,40 @@ class _AffiliateScreenState extends State<AffiliateScreen>
           const EmptyView(message: 'No store mappings yet.')
         else
           Expanded(
-            child: AdminTableCard(
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Store')),
-                  DataColumn(label: Text('Network')),
-                  DataColumn(label: Text('External merchant id')),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('')),
-                ],
-                rows: _mappings
-                    .map(
-                      (mapping) => DataRow(
-                        cells: [
-                          DataCell(Text(mapping.storeName)),
-                          DataCell(Text(mapping.affiliateNetworkName)),
-                          DataCell(Text(mapping.externalMerchantId)),
-                          DataCell(StatusBadge.active(mapping.isActive)),
-                          DataCell(
-                            TextButton(
-                              onPressed: () => _editMapping(mapping),
-                              child: const Text('Edit'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                    .toList(),
-              ),
+            child: AdminStickyTable(
+              columns: const [
+                'Store',
+                'Network',
+                'External merchant id',
+                'Status',
+                '',
+              ],
+              columnWidths: const [160, 140, 200, 100, 70],
+              columnAlignments: const [
+                Alignment.centerLeft,
+                Alignment.centerLeft,
+                Alignment.centerLeft,
+                Alignment.center,
+                Alignment.centerLeft,
+              ],
+              itemCount: _mappings.length,
+              cellsBuilder: (context, index) {
+                final mapping = _mappings[index];
+
+                return [
+                  Text(mapping.storeName),
+                  Text(mapping.affiliateNetworkName),
+                  Text(mapping.externalMerchantId),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: StatusBadge.active(mapping.isActive),
+                  ),
+                  TextButton(
+                    onPressed: () => _editMapping(mapping),
+                    child: const Text('Edit'),
+                  ),
+                ];
+              },
             ),
           ),
       ],

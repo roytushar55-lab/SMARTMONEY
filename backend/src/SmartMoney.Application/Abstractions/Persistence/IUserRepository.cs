@@ -37,4 +37,12 @@ public interface IUserRepository
         CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(CancellationToken cancellationToken = default);
+
+    Task<int> CountByActiveStatusAsync(
+        bool isActive,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountCreatedSinceAsync(
+        DateTime since,
+        CancellationToken cancellationToken = default);
 }

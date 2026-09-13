@@ -27,6 +27,12 @@ class AdminColors {
   static const warning = Color(0xFFF59E0B);
   static const danger = Color(0xFFEF4444);
 
+  /// Extra hues for status grids (e.g. cashback pipeline) that need more
+  /// than the four semantic colors above to stay visually distinct —
+  /// otherwise Pending/Reversed collide with Awaiting review/Rejected.
+  static const statusBlue = Color(0xFF3B82F6);
+  static const statusPink = Color(0xFFEC4899);
+
   /// The mobile app's login-screen gradient (purple to white to a hint of
   /// green), reused for the admin login screen so both apps read as the
   /// same product on the one page a user sees before they're "in" either.

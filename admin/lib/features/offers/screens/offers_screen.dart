@@ -4,7 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
-import '../../../core/widgets/admin_table_card.dart';
+import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -137,36 +137,36 @@ class _OffersScreenState extends State<OffersScreen> {
       case ViewState.empty:
         return const EmptyView(message: 'No offers yet.');
       case ViewState.success:
-        return AdminTableCard(
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Title')),
-              DataColumn(label: Text('Store')),
-              DataColumn(label: Text('Type')),
-              DataColumn(label: Text('Cashback')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('')),
-            ],
-            rows: _offers
-                .map(
-                  (offer) => DataRow(
-                    cells: [
-                      DataCell(Text(offer.title)),
-                      DataCell(Text(offer.storeName)),
-                      DataCell(Text(offer.offerType)),
-                      DataCell(Text(offer.cashbackText ?? offer.cashbackType)),
-                      DataCell(StatusBadge.active(offer.isActive)),
-                      DataCell(
-                        TextButton(
-                          onPressed: () => _edit(offer),
-                          child: const Text('Edit'),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-                .toList(),
-          ),
+        return AdminStickyTable(
+          columns: const ['Title', 'Store', 'Type', 'Cashback', 'Status', ''],
+          columnWidths: const [200, 140, 100, 140, 100, 70],
+          columnAlignments: const [
+            Alignment.centerLeft,
+            Alignment.centerLeft,
+            Alignment.centerLeft,
+            Alignment.centerLeft,
+            Alignment.center,
+            Alignment.centerLeft,
+          ],
+          itemCount: _offers.length,
+          cellsBuilder: (context, index) {
+            final offer = _offers[index];
+
+            return [
+              Text(offer.title),
+              Text(offer.storeName),
+              Text(offer.offerType),
+              Text(offer.cashbackText ?? offer.cashbackType),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: StatusBadge.active(offer.isActive),
+              ),
+              TextButton(
+                onPressed: () => _edit(offer),
+                child: const Text('Edit'),
+              ),
+            ];
+          },
         );
     }
   }

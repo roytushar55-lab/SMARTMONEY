@@ -1,5 +1,6 @@
 import '../../../core/network/authorized_api_client.dart';
 import '../models/admin_user_lookup.dart';
+import '../models/admin_user_stats.dart';
 
 class AdminUserApiService {
   AdminUserApiService({AuthorizedApiClient? client})
@@ -14,6 +15,11 @@ class AdminUserApiService {
       '/api/admin/users?page=$page&pageSize=$pageSize',
     );
     return AdminUserPage.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AdminUserStats> getStats() async {
+    final json = await _client.getJson('/api/admin/users/stats');
+    return AdminUserStats.fromJson(json as Map<String, dynamic>);
   }
 
   Future<AdminUserDetail> getUserDetail(String userId) async {

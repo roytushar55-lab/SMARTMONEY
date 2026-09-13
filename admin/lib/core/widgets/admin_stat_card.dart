@@ -23,46 +23,50 @@ class AdminStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Darkened tints of the card's own hue, so value/label stay legible on
+    // the tinted background while still reading as "part of" that color.
+    final valueColor = Color.lerp(color, Colors.black, 0.45)!;
+    final labelColor = Color.lerp(color, Colors.black, 0.2)!;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AdminRadius.card),
       child: Container(
         padding: const EdgeInsets.all(AdminSpacing.lg),
         decoration: BoxDecoration(
-          color: AdminColors.surface,
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(AdminRadius.card),
-          border: Border.all(color: AdminColors.border),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color,
                 borderRadius: BorderRadius.circular(AdminRadius.input),
               ),
-              child: Icon(icon, size: 18, color: color),
+              child: Icon(icon, size: 16, color: Colors.white),
             ),
             const SizedBox(height: AdminSpacing.md),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
-                color: AdminColors.textPrimary,
-                fontFeatures: [FontFeature.tabularFigures()],
+                color: valueColor,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(
-                color: AdminColors.textMuted,
-                fontSize: 12.5,
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: labelColor, fontSize: 12.5),
             ),
           ],
         ),

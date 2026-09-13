@@ -4,7 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
-import '../../../core/widgets/admin_table_card.dart';
+import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -134,34 +134,34 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       case ViewState.empty:
         return const EmptyView(message: 'No categories yet.');
       case ViewState.success:
-        return AdminTableCard(
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Slug')),
-              DataColumn(label: Text('Order')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('')),
-            ],
-            rows: _categories
-                .map(
-                  (category) => DataRow(
-                    cells: [
-                      DataCell(Text(category.name)),
-                      DataCell(Text(category.slug)),
-                      DataCell(Text('${category.displayOrder}')),
-                      DataCell(StatusBadge.active(category.isActive)),
-                      DataCell(
-                        TextButton(
-                          onPressed: () => _edit(category),
-                          child: const Text('Edit'),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-                .toList(),
-          ),
+        return AdminStickyTable(
+          columns: const ['Name', 'Slug', 'Order', 'Status', ''],
+          columnWidths: const [160, 160, 70, 100, 70],
+          columnAlignments: const [
+            Alignment.centerLeft,
+            Alignment.centerLeft,
+            Alignment.centerLeft,
+            Alignment.center,
+            Alignment.centerLeft,
+          ],
+          itemCount: _categories.length,
+          cellsBuilder: (context, index) {
+            final category = _categories[index];
+
+            return [
+              Text(category.name),
+              Text(category.slug),
+              Text('${category.displayOrder}'),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: StatusBadge.active(category.isActive),
+              ),
+              TextButton(
+                onPressed: () => _edit(category),
+                child: const Text('Edit'),
+              ),
+            ];
+          },
         );
     }
   }

@@ -288,26 +288,28 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < AdminBreakpoints.mobile;
         final crossAxisCount = isMobile ? 2 : 4;
+        final tileWidth =
+            (constraints.maxWidth - AdminSpacing.lg * (crossAxisCount - 1)) /
+            crossAxisCount;
 
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: AdminSpacing.lg,
-            crossAxisSpacing: AdminSpacing.lg,
-            childAspectRatio: isMobile ? 1.25 : 1.4,
-          ),
-          itemCount: tiles.length,
-          itemBuilder: (context, index) {
-            final tile = tiles[index];
-            return AdminStatCard(
-              icon: tile.icon,
-              value: _formatAmount(tile.stat.amount),
-              label: '${tile.label} · ${tile.stat.count}',
-              color: tile.color,
-            );
-          },
+        // Wrap sizes each tile to its own content height instead of forcing
+        // a fixed aspect ratio, so a card never overflows regardless of how
+        // tall its label/value combination ends up being.
+        return Wrap(
+          spacing: AdminSpacing.lg,
+          runSpacing: AdminSpacing.lg,
+          children: [
+            for (final tile in tiles)
+              SizedBox(
+                width: tileWidth,
+                child: AdminStatCard(
+                  icon: tile.icon,
+                  value: _formatAmount(tile.stat.amount),
+                  label: '${tile.label} · ${tile.stat.count}',
+                  color: tile.color,
+                ),
+              ),
+          ],
         );
       },
     );

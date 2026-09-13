@@ -14,7 +14,7 @@ class CashbackStatusCopy {
       case 'Pending':
         return const CashbackStatusCopy(
           label: 'Pending',
-          color: AdminColors.textMuted,
+          color: AdminColors.statusBlue,
         );
       case 'AwaitingAdminReview':
         return const CashbackStatusCopy(
@@ -34,7 +34,7 @@ class CashbackStatusCopy {
       case 'Reversed':
         return const CashbackStatusCopy(
           label: 'Reversed',
-          color: AdminColors.danger,
+          color: AdminColors.statusPink,
         );
       case 'PaidOut':
         return const CashbackStatusCopy(

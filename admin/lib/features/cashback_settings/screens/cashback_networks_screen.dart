@@ -4,7 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
-import '../../../core/widgets/admin_table_card.dart';
+import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -104,33 +104,33 @@ class _CashbackNetworksScreenState extends State<CashbackNetworksScreen> {
   }
 
   Widget _buildTable() {
-    return AdminTableCard(
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Name')),
-          DataColumn(label: Text('Code')),
-          DataColumn(label: Text('Status')),
-          DataColumn(label: Text('')),
-        ],
-        rows: _networks
-            .map(
-              (network) => DataRow(
-                onSelectChanged: (_) => _openNetwork(network),
-                cells: [
-                  DataCell(Text(network.name)),
-                  DataCell(Text(network.code)),
-                  DataCell(StatusBadge.active(network.isActive)),
-                  DataCell(
-                    TextButton(
-                      onPressed: () => _openNetwork(network),
-                      child: const Text('Manage'),
-                    ),
-                  ),
-                ],
-              ),
-            )
-            .toList(),
-      ),
+    return AdminStickyTable(
+      columns: const ['Name', 'Code', 'Status', ''],
+      columnWidths: const [160, 120, 100, 90],
+      columnAlignments: const [
+        Alignment.centerLeft,
+        Alignment.centerLeft,
+        Alignment.center,
+        Alignment.centerLeft,
+      ],
+      itemCount: _networks.length,
+      onRowTap: (index) => _openNetwork(_networks[index]),
+      cellsBuilder: (context, index) {
+        final network = _networks[index];
+
+        return [
+          Text(network.name),
+          Text(network.code),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: StatusBadge.active(network.isActive),
+          ),
+          TextButton(
+            onPressed: () => _openNetwork(network),
+            child: const Text('Manage'),
+          ),
+        ];
+      },
     );
   }
 }

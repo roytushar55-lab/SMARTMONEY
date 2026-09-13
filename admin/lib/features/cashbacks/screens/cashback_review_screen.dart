@@ -4,7 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
-import '../../../core/widgets/admin_table_card.dart';
+import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -220,21 +220,42 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: AdminTableCard(
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('User')),
-                DataColumn(label: Text('Store')),
-                DataColumn(label: Text('Order value')),
-                DataColumn(label: Text('Commission')),
-                DataColumn(label: Text('Amount')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Network status')),
-                DataColumn(label: Text('Created')),
-                DataColumn(label: Text('Actions')),
-              ],
-              rows: page.items.map(_buildRow).toList(),
-            ),
+          child: AdminStickyTable(
+            columns: const [
+              'User',
+              'Store',
+              'Order value',
+              'Commission',
+              'Amount',
+              'Status',
+              'Network status',
+              'Created',
+              'Actions',
+            ],
+            columnWidths: const [
+              180,
+              140,
+              110,
+              110,
+              110,
+              120,
+              130,
+              100,
+              190,
+            ],
+            columnAlignments: const [
+              Alignment.centerLeft,
+              Alignment.centerLeft,
+              Alignment.centerLeft,
+              Alignment.centerLeft,
+              Alignment.centerLeft,
+              Alignment.center,
+              Alignment.centerLeft,
+              Alignment.centerLeft,
+              Alignment.centerLeft,
+            ],
+            itemCount: page.items.length,
+            cellsBuilder: (context, index) => _buildCells(page.items[index]),
           ),
         ),
         const SizedBox(height: AdminSpacing.md),
@@ -243,45 +264,46 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
     );
   }
 
-  DataRow _buildRow(AdminCashback cashback) {
+  List<Widget> _buildCells(AdminCashback cashback) {
     final busy = _busyIds.contains(cashback.id);
     final statusCopy = CashbackStatusCopy.forStatus(cashback.status);
 
-    return DataRow(
-      cells: [
-        DataCell(Text(cashback.userEmail)),
-        DataCell(Text(cashback.storeName ?? '—')),
-        DataCell(
-          Text(
-            cashback.orderAmount == null
-                ? '—'
-                : '₹${cashback.orderAmount!.toStringAsFixed(2)}',
-            style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
-          ),
+    return [
+      Text(cashback.userEmail),
+      Text(cashback.storeName ?? '—'),
+      Text(
+        cashback.orderAmount == null
+            ? '—'
+            : '₹${cashback.orderAmount!.toStringAsFixed(2)}',
+        style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
+      ),
+      Text(
+        cashback.commissionAmount == null
+            ? '—'
+            : '₹${cashback.commissionAmount!.toStringAsFixed(2)}',
+        style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
+      ),
+      Text(
+        '₹${cashback.cashbackAmount.toStringAsFixed(2)}',
+        style: const TextStyle(
+          fontFeatures: [FontFeature.tabularFigures()],
+          fontWeight: FontWeight.w600,
         ),
-        DataCell(
-          Text(
-            cashback.commissionAmount == null
-                ? '—'
-                : '₹${cashback.commissionAmount!.toStringAsFixed(2)}',
-            style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
-          ),
-        ),
-        DataCell(
-          Text(
-            '₹${cashback.cashbackAmount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontFeatures: [FontFeature.tabularFigures()],
-              fontWeight: FontWeight.w600,
+      ),
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: StatusBadge(label: statusCopy.label, color: statusCopy.color),
+      ),
+      Text(cashback.networkStatus),
+      Text(_formatDate(cashback.createdAt)),
+      busy
+          ? const _RowSpinner()
+          : FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: _buildActions(cashback),
             ),
-          ),
-        ),
-        DataCell(StatusBadge(label: statusCopy.label, color: statusCopy.color)),
-        DataCell(Text(cashback.networkStatus)),
-        DataCell(Text(_formatDate(cashback.createdAt))),
-        DataCell(busy ? const _RowSpinner() : _buildActions(cashback)),
-      ],
-    );
+    ];
   }
 
   Widget _buildActions(AdminCashback cashback) {

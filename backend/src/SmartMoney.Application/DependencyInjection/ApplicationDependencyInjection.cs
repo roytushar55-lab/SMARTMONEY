@@ -47,6 +47,7 @@ using SmartMoney.Application.Features.Categories.UpdateCategory;
 using SmartMoney.Application.Features.Identity.ChangeUserRole;
 using SmartMoney.Application.Features.Identity.GetUserByEmail;
 using SmartMoney.Application.Features.Identity.GetUserDetail;
+using SmartMoney.Application.Features.Identity.GetUserStats;
 using SmartMoney.Application.Features.Identity.ForgotPassword;
 using SmartMoney.Application.Features.Identity.GoogleLogin;
 using SmartMoney.Application.Features.Identity.ListUsers;
@@ -160,6 +161,8 @@ public static class ApplicationDependencyInjection
         services.AddScoped<IQueryHandler<GetUserDetailQuery,AdminUserDetailResponse?>,GetUserDetailQueryHandler>();
 
         services.AddScoped<ICommandHandler<UpdateUserStatusCommand,AdminUserStatusResponse?>,UpdateUserStatusCommandHandler>();
+
+        services.AddScoped<IQueryHandler<GetUserStatsQuery,AdminUserStatsResponse>,GetUserStatsQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetMyWalletQuery,MyWalletResponse>,GetMyWalletQueryHandler>();
 

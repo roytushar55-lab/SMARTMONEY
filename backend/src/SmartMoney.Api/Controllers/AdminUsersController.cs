@@ -7,6 +7,7 @@ using SmartMoney.Application.Contracts.Identity.ChangeUserRole;
 using SmartMoney.Application.Features.Identity.ChangeUserRole;
 using SmartMoney.Application.Features.Identity.GetUserByEmail;
 using SmartMoney.Application.Features.Identity.GetUserDetail;
+using SmartMoney.Application.Features.Identity.GetUserStats;
 using SmartMoney.Application.Features.Identity.ListUsers;
 using SmartMoney.Application.Features.Identity.UpdateUserStatus;
 
@@ -21,19 +22,22 @@ public sealed class AdminUsersController : ControllerBase
     private readonly IQueryHandler<ListUsersQuery, AdminUserListResponse> _listHandler;
     private readonly IQueryHandler<GetUserDetailQuery, AdminUserDetailResponse?> _detailHandler;
     private readonly ICommandHandler<UpdateUserStatusCommand, AdminUserStatusResponse?> _statusHandler;
+    private readonly IQueryHandler<GetUserStatsQuery, AdminUserStatsResponse> _statsHandler;
 
     public AdminUsersController(
         ICommandHandler<ChangeUserRoleCommand, ChangeUserRoleResponse?> changeRoleHandler,
         IQueryHandler<GetUserByEmailQuery, AdminUserLookupResponse?> lookupHandler,
         IQueryHandler<ListUsersQuery, AdminUserListResponse> listHandler,
         IQueryHandler<GetUserDetailQuery, AdminUserDetailResponse?> detailHandler,
-        ICommandHandler<UpdateUserStatusCommand, AdminUserStatusResponse?> statusHandler)
+        ICommandHandler<UpdateUserStatusCommand, AdminUserStatusResponse?> statusHandler,
+        IQueryHandler<GetUserStatsQuery, AdminUserStatsResponse> statsHandler)
     {
         _changeRoleHandler = changeRoleHandler;
         _lookupHandler = lookupHandler;
         _listHandler = listHandler;
         _detailHandler = detailHandler;
         _statusHandler = statusHandler;
+        _statsHandler = statsHandler;
     }
 
     /// <summary>
@@ -48,6 +52,21 @@ public sealed class AdminUsersController : ControllerBase
     {
         var response = await _listHandler.HandleAsync(
             new ListUsersQuery(page, pageSize), cancellationToken);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Dashboard KPI tile data: total/active/deactivated users, plus
+    /// signups in the trailing 7 days.
+    /// </summary>
+    [HttpGet("api/admin/users/stats")]
+    [ProducesResponseType(typeof(AdminUserStatsResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AdminUserStatsResponse>> GetStats(
+        CancellationToken cancellationToken)
+    {
+        var response = await _statsHandler.HandleAsync(
+            new GetUserStatsQuery(), cancellationToken);
 
         return Ok(response);
     }

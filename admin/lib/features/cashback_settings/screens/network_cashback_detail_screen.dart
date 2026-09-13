@@ -4,7 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
-import '../../../core/widgets/admin_table_card.dart';
+import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -240,20 +240,7 @@ class _NetworkCashbackDetailScreenState
       children: [
         NetworkGlobalSettingsCard(global: detail.global, onSave: _saveGlobal),
         const SizedBox(height: AdminSpacing.xl),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Store & category overrides',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-            ),
-            FilledButton.icon(
-              onPressed: _addOverride,
-              icon: const Icon(Icons.add),
-              label: const Text('Add override'),
-            ),
-          ],
-        ),
+        _buildOverridesHeader(),
         const SizedBox(height: AdminSpacing.md),
         if (detail.overrides.isEmpty)
           const EmptyView(message: 'No overrides yet for this network.')
@@ -263,47 +250,90 @@ class _NetworkCashbackDetailScreenState
     );
   }
 
+  Widget _buildOverridesHeader() {
+    const title = Text(
+      'Store & category overrides',
+      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+    );
+    final button = FilledButton.icon(
+      onPressed: _addOverride,
+      icon: const Icon(Icons.add),
+      label: const Text('Add override'),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < AdminBreakpoints.mobile;
+
+        if (isMobile) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              title,
+              const SizedBox(height: AdminSpacing.md),
+              button,
+            ],
+          );
+        }
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [title, button],
+        );
+      },
+    );
+  }
+
   Widget _buildOverridesTable(List<AdminCashbackRateOverride> overrides) {
-    return AdminTableCard(
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Store')),
-          DataColumn(label: Text('Category')),
-          DataColumn(label: Text('User share')),
-          DataColumn(label: Text('Window')),
-          DataColumn(label: Text('')),
-        ],
-        rows: overrides
-            .map(
-              (override) => DataRow(
-                cells: [
-                  DataCell(Text(override.storeName)),
-                  DataCell(Text(override.categoryName ?? 'All categories')),
-                  DataCell(Text('${override.userSharePercent}%')),
-                  DataCell(Text('${override.confirmationWindowDays} days')),
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          onPressed: () => _editOverride(override),
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          tooltip: 'Edit',
-                        ),
-                        IconButton(
-                          onPressed: () => _deleteOverride(override),
-                          icon: const Icon(Icons.delete_outline, size: 18),
-                          color: AdminColors.danger,
-                          tooltip: 'Delete',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+    return AdminStickyTable(
+      shrinkWrap: true,
+      columns: const ['Store', 'Category', 'User share', 'Window', ''],
+      columnWidths: const [150, 150, 100, 90, 90],
+      itemCount: overrides.length,
+      cellsBuilder: (context, index) {
+        final override = overrides[index];
+
+        return [
+          Text(override.storeName),
+          Text(override.categoryName ?? 'All categories'),
+          Text('${override.userSharePercent}%'),
+          Text('${override.confirmationWindowDays} days'),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _compactIconButton(
+                onPressed: () => _editOverride(override),
+                icon: Icons.edit_outlined,
+                tooltip: 'Edit',
               ),
-            )
-            .toList(),
-      ),
+              _compactIconButton(
+                onPressed: () => _deleteOverride(override),
+                icon: Icons.delete_outline,
+                tooltip: 'Delete',
+                color: AdminColors.danger,
+              ),
+            ],
+          ),
+        ];
+      },
+    );
+  }
+
+  Widget _compactIconButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String tooltip,
+    Color? color,
+  }) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      tooltip: tooltip,
+      color: color,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      splashRadius: 18,
     );
   }
 }

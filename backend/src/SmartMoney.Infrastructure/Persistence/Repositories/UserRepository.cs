@@ -96,4 +96,20 @@ public sealed class UserRepository : IUserRepository
     {
         return _context.Users.CountAsync(cancellationToken);
     }
+
+    public Task<int> CountByActiveStatusAsync(
+        bool isActive,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Users.CountAsync(
+            user => user.IsActive == isActive, cancellationToken);
+    }
+
+    public Task<int> CountCreatedSinceAsync(
+        DateTime since,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Users.CountAsync(
+            user => user.CreatedAt >= since, cancellationToken);
+    }
 }

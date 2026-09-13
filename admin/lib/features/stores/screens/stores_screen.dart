@@ -4,7 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
-import '../../../core/widgets/admin_table_card.dart';
+import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
@@ -166,44 +166,49 @@ class _StoresScreenState extends State<StoresScreen> {
       case ViewState.empty:
         return const EmptyView(message: 'No stores yet.');
       case ViewState.success:
-        return AdminTableCard(
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Slug')),
-              DataColumn(label: Text('Categories')),
-              DataColumn(label: Text('Featured')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('')),
-            ],
-            rows: _stores
-                .map(
-                  (store) => DataRow(
-                    cells: [
-                      DataCell(Text(store.name)),
-                      DataCell(Text(store.slug)),
-                      DataCell(Text(_categoryNames(store))),
-                      DataCell(
-                        Icon(
-                          store.isFeatured ? Icons.star : Icons.star_border,
-                          size: 18,
-                          color: store.isFeatured
-                              ? AdminColors.warning
-                              : AdminColors.textMuted,
-                        ),
-                      ),
-                      DataCell(StatusBadge.active(store.isActive)),
-                      DataCell(
-                        TextButton(
-                          onPressed: () => _edit(store),
-                          child: const Text('Edit'),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-                .toList(),
-          ),
+        return AdminStickyTable(
+          columns: const [
+            'Name',
+            'Slug',
+            'Categories',
+            'Featured',
+            'Status',
+            '',
+          ],
+          columnWidths: const [160, 160, 200, 90, 100, 70],
+          columnAlignments: const [
+            Alignment.centerLeft,
+            Alignment.centerLeft,
+            Alignment.centerLeft,
+            Alignment.centerLeft,
+            Alignment.center,
+            Alignment.centerLeft,
+          ],
+          itemCount: _stores.length,
+          cellsBuilder: (context, index) {
+            final store = _stores[index];
+
+            return [
+              Text(store.name),
+              Text(store.slug),
+              Text(_categoryNames(store)),
+              Icon(
+                store.isFeatured ? Icons.star : Icons.star_border,
+                size: 18,
+                color: store.isFeatured
+                    ? AdminColors.warning
+                    : AdminColors.textMuted,
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: StatusBadge.active(store.isActive),
+              ),
+              TextButton(
+                onPressed: () => _edit(store),
+                child: const Text('Edit'),
+              ),
+            ];
+          },
         );
     }
   }

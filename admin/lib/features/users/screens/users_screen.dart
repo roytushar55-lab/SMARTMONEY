@@ -4,7 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/admin_page_header.dart';
 import '../../../core/widgets/admin_page_scaffold.dart';
-import '../../../core/widgets/admin_table_card.dart';
+import '../../../core/widgets/admin_sticky_table.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
@@ -111,37 +111,37 @@ class _UsersScreenState extends State<UsersScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: AdminTableCard(
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Username')),
-                DataColumn(label: Text('Email')),
-                DataColumn(label: Text('Member since')),
-                DataColumn(label: Text('Status')),
-              ],
-              rows: page.items.map(_buildRow).toList(),
-            ),
+          child: AdminStickyTable(
+            columns: const ['Username', 'Email', 'Member since', 'Status'],
+            columnWidths: const [160, 240, 130, 110],
+            columnAlignments: const [
+              Alignment.centerLeft,
+              Alignment.centerLeft,
+              Alignment.centerLeft,
+              Alignment.center,
+            ],
+            itemCount: page.items.length,
+            onRowTap: (index) => _openDetail(page.items[index]),
+            cellsBuilder: (context, index) {
+              final user = page.items[index];
+
+              return [
+                Text(
+                  user.fullName.isEmpty ? user.email : user.fullName,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(user.email),
+                Text(_formatDate(user.createdAt)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: StatusBadge.active(user.isActive),
+                ),
+              ];
+            },
           ),
         ),
         const SizedBox(height: AdminSpacing.md),
         _buildPager(page),
-      ],
-    );
-  }
-
-  DataRow _buildRow(AdminUserListItem user) {
-    return DataRow(
-      onSelectChanged: (_) => _openDetail(user),
-      cells: [
-        DataCell(
-          Text(
-            user.fullName.isEmpty ? user.email : user.fullName,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-        DataCell(Text(user.email)),
-        DataCell(Text(_formatDate(user.createdAt))),
-        DataCell(StatusBadge.active(user.isActive)),
       ],
     );
   }
@@ -154,21 +154,34 @@ class _UsersScreenState extends State<UsersScreen> {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           '${page.totalCount} total · page ${page.page} of $totalPages',
           style: const TextStyle(color: AdminColors.textMuted, fontSize: 12),
         ),
-        const SizedBox(width: AdminSpacing.md),
-        IconButton(
+        const SizedBox(width: AdminSpacing.sm),
+        _pagerButton(
+          icon: Icons.chevron_left,
           onPressed: page.page > 1 ? () => _changePage(-1) : null,
-          icon: const Icon(Icons.chevron_left),
         ),
-        IconButton(
+        const SizedBox(width: 4),
+        _pagerButton(
+          icon: Icons.chevron_right,
           onPressed: page.hasNextPage ? () => _changePage(1) : null,
-          icon: const Icon(Icons.chevron_right),
         ),
       ],
+    );
+  }
+
+  Widget _pagerButton({required IconData icon, required VoidCallback? onPressed}) {
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 20),
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      splashRadius: 18,
     );
   }
 
