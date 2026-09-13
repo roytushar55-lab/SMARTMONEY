@@ -44,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<IAffiliateConversionRepository, AffiliateConversionRepository>();
         services.AddScoped<ICashbackRepository, CashbackRepository>();
         services.AddScoped<ICashbackSettingsRepository, CashbackSettingsRepository>();
+        services.AddScoped<INetworkCashbackSettingsRepository, NetworkCashbackSettingsRepository>();
+        services.AddScoped<ICashbackRateOverrideRepository, CashbackRateOverrideRepository>();
         services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
 
         services.AddScoped<IUnitOfWork>(serviceProvider =>

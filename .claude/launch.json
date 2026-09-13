@@ -6,9 +6,28 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": [
         "/c",
-        "cd /d C:\\Users\\royap\\SMARTMONEY\\admin && flutter run -d web-server --web-port 5180"
+        "cd /d D:\\Projects\\Personal\\SMARTMONEY\\admin && flutter run -d web-server --web-port 5180"
       ],
       "port": 5180
+    },
+    {
+      "name": "smartmoney-backend",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d D:\\Projects\\Personal\\SMARTMONEY\\backend\\src\\SmartMoney.Api && dotnet run --launch-profile https"
+      ],
+      "port": 7056,
+      "url": "https://localhost:7056"
+    },
+    {
+      "name": "smartmoney-mobile",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d D:\\Projects\\Personal\\SMARTMONEY\\smart_money_mobile && flutter run -d web-server --web-port 8088"
+      ],
+      "port": 8088
     }
   ]
 }

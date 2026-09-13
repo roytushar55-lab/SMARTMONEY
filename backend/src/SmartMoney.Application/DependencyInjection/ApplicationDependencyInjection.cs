@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using SmartMoney.Application.Abstractions.CashbackRates;
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Contracts.Affiliate;
 using SmartMoney.Application.Contracts.AffiliateNetworks;
 using SmartMoney.Application.Contracts.Categories;
 using SmartMoney.Application.Contracts.Cashbacks;
 using SmartMoney.Application.Contracts.CashbackSettings;
+using SmartMoney.Application.Contracts.Identity.AdminUsers;
 using SmartMoney.Application.Contracts.Identity.ChangeUserRole;
 using SmartMoney.Application.Contracts.Identity.ForgotPassword;
 using SmartMoney.Application.Contracts.Identity.Login;
@@ -24,26 +26,36 @@ using SmartMoney.Application.Features.Affiliate.ResolveAffiliateRedirect;
 using SmartMoney.Application.Features.AffiliateNetworks.CreateAffiliateNetwork;
 using SmartMoney.Application.Features.AffiliateNetworks.ListAffiliateNetworksAdmin;
 using SmartMoney.Application.Features.AffiliateNetworks.UpdateAffiliateNetwork;
+using SmartMoney.Application.Features.Cashbacks;
 using SmartMoney.Application.Features.Cashbacks.ApproveCashback;
 using SmartMoney.Application.Features.Cashbacks.GetMyCashbacks;
 using SmartMoney.Application.Features.Cashbacks.ListCashbacks;
 using SmartMoney.Application.Features.Cashbacks.RejectCashback;
 using SmartMoney.Application.Features.Cashbacks.ReverseCashback;
+using SmartMoney.Application.Features.CashbackSettings.CreateCashbackOverride;
+using SmartMoney.Application.Features.CashbackSettings.DeleteCashbackOverride;
 using SmartMoney.Application.Features.CashbackSettings.GetCashbackSettings;
+using SmartMoney.Application.Features.CashbackSettings.GetNetworkCashbackSettings;
+using SmartMoney.Application.Features.CashbackSettings.ListNetworks;
+using SmartMoney.Application.Features.CashbackSettings.UpdateCashbackOverride;
 using SmartMoney.Application.Features.CashbackSettings.UpdateCashbackSettings;
+using SmartMoney.Application.Features.CashbackSettings.UpdateNetworkCashbackSettings;
 using SmartMoney.Application.Features.Categories.CreateCategory;
 using SmartMoney.Application.Features.Categories.GetCategories;
 using SmartMoney.Application.Features.Categories.ListCategoriesAdmin;
 using SmartMoney.Application.Features.Categories.UpdateCategory;
 using SmartMoney.Application.Features.Identity.ChangeUserRole;
 using SmartMoney.Application.Features.Identity.GetUserByEmail;
+using SmartMoney.Application.Features.Identity.GetUserDetail;
 using SmartMoney.Application.Features.Identity.ForgotPassword;
 using SmartMoney.Application.Features.Identity.GoogleLogin;
+using SmartMoney.Application.Features.Identity.ListUsers;
 using SmartMoney.Application.Features.Identity.Login;
 using SmartMoney.Application.Features.Identity.RefreshToken;
 using SmartMoney.Application.Features.Identity.Register;
 using SmartMoney.Application.Features.Identity.ResendEmailOtp;
 using SmartMoney.Application.Features.Identity.ResetPassword;
+using SmartMoney.Application.Features.Identity.UpdateUserStatus;
 using SmartMoney.Application.Features.Identity.VerifyEmailOtp;
 using SmartMoney.Application.Features.Offers.CreateOffer;
 using SmartMoney.Application.Features.Offers.GetOfferDetails;
@@ -143,6 +155,12 @@ public static class ApplicationDependencyInjection
 
         services.AddScoped<IQueryHandler<GetUserByEmailQuery,AdminUserLookupResponse?>,GetUserByEmailQueryHandler>();
 
+        services.AddScoped<IQueryHandler<ListUsersQuery,AdminUserListResponse>,ListUsersQueryHandler>();
+
+        services.AddScoped<IQueryHandler<GetUserDetailQuery,AdminUserDetailResponse?>,GetUserDetailQueryHandler>();
+
+        services.AddScoped<ICommandHandler<UpdateUserStatusCommand,AdminUserStatusResponse?>,UpdateUserStatusCommandHandler>();
+
         services.AddScoped<IQueryHandler<GetMyWalletQuery,MyWalletResponse>,GetMyWalletQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetMyWalletTransactionsQuery,WalletTransactionListResponse>,GetMyWalletTransactionsQueryHandler>();
@@ -204,6 +222,26 @@ public static class ApplicationDependencyInjection
         services.AddScoped<ICommandHandler<UpdateStoreAffiliateMappingCommand,StoreAffiliateMappingAdminResponse?>,UpdateStoreAffiliateMappingCommandHandler>();
 
         services.AddScoped<IQueryHandler<ListStoreAffiliateMappingsAdminQuery,IReadOnlyList<StoreAffiliateMappingAdminResponse>>,ListStoreAffiliateMappingsAdminQueryHandler>();
+
+        services.AddScoped<ICashbackRateResolver, CashbackRateResolver>();
+
+        services.AddScoped<IQueryHandler<ListNetworksQuery,IReadOnlyList<AffiliateNetworkAdminResponse>>,ListNetworksQueryHandler>();
+
+        services.AddScoped<IQueryHandler<GetNetworkCashbackSettingsQuery,NetworkCashbackSettingsDetailResponse?>,GetNetworkCashbackSettingsQueryHandler>();
+
+        services.AddScoped<UpdateNetworkCashbackSettingsValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateNetworkCashbackSettingsCommand,NetworkCashbackSettingsResponse?>,UpdateNetworkCashbackSettingsCommandHandler>();
+
+        services.AddScoped<CreateCashbackOverrideValidator>();
+
+        services.AddScoped<ICommandHandler<CreateCashbackOverrideCommand,CashbackRateOverrideResponse>,CreateCashbackOverrideCommandHandler>();
+
+        services.AddScoped<UpdateCashbackOverrideValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateCashbackOverrideCommand,CashbackRateOverrideResponse?>,UpdateCashbackOverrideCommandHandler>();
+
+        services.AddScoped<ICommandHandler<DeleteCashbackOverrideCommand,bool>,DeleteCashbackOverrideCommandHandler>();
 
         return services;
     }

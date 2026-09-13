@@ -1,4 +1,5 @@
 using Moq;
+using SmartMoney.Application.Abstractions.CashbackRates;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Application.Features.Affiliate.IngestAffiliateConversion;
 using SmartMoney.Domain.Entities;
@@ -11,7 +12,8 @@ public sealed class IngestAffiliateConversionHandlerTests
     private readonly Mock<IAffiliateConversionRepository> _conversions = new();
     private readonly Mock<IAffiliateClickRepository> _clicks = new();
     private readonly Mock<ICashbackRepository> _cashbacks = new();
-    private readonly Mock<ICashbackSettingsRepository> _settings = new();
+    private readonly Mock<ICashbackRateResolver> _rateResolver = new();
+    private readonly Mock<IStoreRepository> _stores = new();
     private readonly Mock<IWalletRepository> _wallets = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactions = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
@@ -32,8 +34,8 @@ public sealed class IngestAffiliateConversionHandlerTests
     private IngestAffiliateConversionCommandHandler CreateHandler()
     {
         var processor = new ConversionCashbackProcessor(
-            _cashbacks.Object, _settings.Object, _wallets.Object, _clicks.Object,
-            _walletTransactions.Object);
+            _cashbacks.Object, _rateResolver.Object, _stores.Object, _wallets.Object,
+            _clicks.Object, _walletTransactions.Object);
 
         return new IngestAffiliateConversionCommandHandler(
             new IngestAffiliateConversionValidator(),

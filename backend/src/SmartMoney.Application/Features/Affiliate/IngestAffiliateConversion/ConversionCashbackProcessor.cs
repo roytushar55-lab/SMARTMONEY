@@ -1,3 +1,4 @@
+using SmartMoney.Application.Abstractions.CashbackRates;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Domain.Entities;
 using SmartMoney.Domain.Enums;
@@ -27,20 +28,23 @@ namespace SmartMoney.Application.Features.Affiliate.IngestAffiliateConversion;
 public sealed class ConversionCashbackProcessor
 {
     private readonly ICashbackRepository _cashbackRepository;
-    private readonly ICashbackSettingsRepository _settingsRepository;
+    private readonly ICashbackRateResolver _rateResolver;
+    private readonly IStoreRepository _storeRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IAffiliateClickRepository _clickRepository;
     private readonly IWalletTransactionRepository _walletTransactionRepository;
 
     public ConversionCashbackProcessor(
         ICashbackRepository cashbackRepository,
-        ICashbackSettingsRepository settingsRepository,
+        ICashbackRateResolver rateResolver,
+        IStoreRepository storeRepository,
         IWalletRepository walletRepository,
         IAffiliateClickRepository clickRepository,
         IWalletTransactionRepository walletTransactionRepository)
     {
         _cashbackRepository = cashbackRepository;
-        _settingsRepository = settingsRepository;
+        _rateResolver = rateResolver;
+        _storeRepository = storeRepository;
         _walletRepository = walletRepository;
         _clickRepository = clickRepository;
         _walletTransactionRepository = walletTransactionRepository;
@@ -119,13 +123,6 @@ public sealed class ConversionCashbackProcessor
             return null;
         }
 
-        var settings = await _settingsRepository.GetAsync(cancellationToken);
-
-        if (settings is null || settings.UserSharePercent <= 0)
-        {
-            return null;
-        }
-
         var click = await _clickRepository.GetByIdAsync(clickId, cancellationToken);
 
         if (click is null)
@@ -133,8 +130,28 @@ public sealed class ConversionCashbackProcessor
             return null;
         }
 
+        // A store can carry more than one category via StoreCategory, and the
+        // conversion itself does not tell us which one was actually browsed.
+        // We resolve against the store's "primary" category — the lowest
+        // CategoryId among its mappings — rather than passing null, so a
+        // category-specific override still applies to single-category
+        // stores (the common case) without needing per-conversion category
+        // tracking. A store with several categories and different override
+        // rates per category will resolve to whichever one sorts first;
+        // that's an accepted limitation until conversions carry their own
+        // category.
+        var categoryId = await _storeRepository.GetPrimaryCategoryIdAsync(click.StoreId, cancellationToken);
+
+        var effectiveRate = await _rateResolver.ResolveEffectiveRateAsync(
+            click.AffiliateNetworkId, click.StoreId, categoryId, cancellationToken);
+
+        if (effectiveRate is not { UserSharePercent: > 0 } rate)
+        {
+            return null;
+        }
+
         var amount = Math.Round(
-            commission * settings.UserSharePercent / 100m,
+            commission * rate.UserSharePercent / 100m,
             2,
             MidpointRounding.AwayFromZero);
 
@@ -156,7 +173,7 @@ public sealed class ConversionCashbackProcessor
             wallet.Id,
             conversion.Id,
             amount,
-            DateTime.UtcNow.AddDays(settings.ConfirmationWindowDays));
+            DateTime.UtcNow.AddDays(rate.ConfirmationWindowDays));
 
         await _cashbackRepository.AddAsync(cashback, cancellationToken);
 

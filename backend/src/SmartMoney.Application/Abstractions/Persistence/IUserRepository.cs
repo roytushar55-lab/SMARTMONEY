@@ -27,4 +27,14 @@ public interface IUserRepository
     Task AddAsync(
         User user,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Admin user listing. Read-only. Newest first.
+    /// </summary>
+    Task<IReadOnlyList<User>> ListAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
 }

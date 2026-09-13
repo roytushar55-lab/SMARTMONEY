@@ -42,7 +42,7 @@ class AdminStatCard extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AdminRadius.input),
               ),
               child: Icon(icon, size: 18, color: color),
             ),

@@ -33,4 +33,12 @@ public interface IStoreRepository
         int maxOrder,
         Guid? excludeId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The store's "primary" category for cashback-rate resolution when a
+    /// conversion carries no explicit category — the lowest CategoryId among
+    /// the store's mapped categories (stable, arbitrary otherwise), or null
+    /// if the store has none.
+    /// </summary>
+    Task<Guid?> GetPrimaryCategoryIdAsync(Guid storeId, CancellationToken cancellationToken = default);
 }

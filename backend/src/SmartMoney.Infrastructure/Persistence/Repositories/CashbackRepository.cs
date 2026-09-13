@@ -89,6 +89,24 @@ public sealed class CashbackRepository : ICashbackRepository
             .CountAsync(cashback => cashback.UserId == userId, cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<CashbackStatus, (int Count, decimal Amount)>> GetStatusSummaryByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _context.Cashbacks
+            .Where(cashback => cashback.UserId == userId)
+            .GroupBy(cashback => cashback.Status)
+            .Select(group => new
+            {
+                Status = group.Key,
+                Count = group.Count(),
+                Amount = group.Sum(cashback => cashback.CashbackAmount)
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(row => row.Status, row => (row.Count, row.Amount));
+    }
+
     private IQueryable<Cashback> QueryByStatus(CashbackStatus? status)
     {
         return status is CashbackStatus filter

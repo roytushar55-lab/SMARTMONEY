@@ -99,6 +99,12 @@ public class User : BaseEntity
         MarkAsUpdated();
     }
 
+    public void Activate()
+    {
+        IsActive = true;
+        MarkAsUpdated();
+    }
+
     public void ActivateAccount()
     {
         Status = UserStatus.Active;
