@@ -7,9 +7,12 @@ import '../theme/admin_colors.dart';
 /// active/inactive filtering (Users, Store mappings, ...). The search field
 /// glows and lifts on focus with a clear button that appears once there's
 /// text; the chips fill solid green/red once selected, each hugging its
-/// label rather than stretching. The search field caps at 240px on wide
-/// screens but shrinks to whatever's left beside the two chips on narrow
-/// ones, so all three always stay on one line.
+/// label rather than stretching. On wide screens the search field caps at
+/// 240px and sits inline before the chips; once there isn't room for the
+/// search field plus every chip on one line (more so once [extraChips] adds
+/// a third filter dimension), the search field takes its own full-width row
+/// above the chips, which wrap onto as many lines as they need — so nothing
+/// ever overflows.
 class AdminSearchStatusBar extends StatefulWidget {
   const AdminSearchStatusBar({
     super.key,
@@ -59,36 +62,66 @@ class _AdminSearchStatusBarState extends State<AdminSearchStatusBar> {
     super.dispose();
   }
 
+  List<Widget> get _chips => [
+    AdminFilterChip(
+      selected: widget.statusFilter == true,
+      label: 'Active',
+      activeColor: AdminColors.success,
+      onTap: () => widget.onStatusToggle(true),
+    ),
+    AdminFilterChip(
+      selected: widget.statusFilter == false,
+      label: 'Inactive',
+      activeColor: AdminColors.danger,
+      onTap: () => widget.onStatusToggle(false),
+    ),
+    ...?widget.extraChips,
+  ];
+
+  /// Rough width needed to fit the search field (at its 240px cap) plus
+  /// every chip inline, used to decide whether this run has room for the
+  /// single-row layout.
+  double get _inlineWidthNeeded {
+    const chipWidthEstimate = 90.0;
+    final chipCount = 2 + (widget.extraChips?.length ?? 0);
+    return 240 + AdminSpacing.sm + chipCount * (chipWidthEstimate + AdminSpacing.sm);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Flexible(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 240),
-            child: _buildSearchField(),
-          ),
-        ),
-        const SizedBox(width: AdminSpacing.sm),
-        AdminFilterChip(
-          selected: widget.statusFilter == true,
-          label: 'Active',
-          activeColor: AdminColors.success,
-          onTap: () => widget.onStatusToggle(true),
-        ),
-        const SizedBox(width: AdminSpacing.sm),
-        AdminFilterChip(
-          selected: widget.statusFilter == false,
-          label: 'Inactive',
-          activeColor: AdminColors.danger,
-          onTap: () => widget.onStatusToggle(false),
-        ),
-        for (final chip in widget.extraChips ?? <Widget>[]) ...[
-          const SizedBox(width: AdminSpacing.sm),
-          chip,
-        ],
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= _inlineWidthNeeded) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240),
+                  child: _buildSearchField(),
+                ),
+              ),
+              for (final chip in _chips) ...[
+                const SizedBox(width: AdminSpacing.sm),
+                chip,
+              ],
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildSearchField(),
+            const SizedBox(height: AdminSpacing.sm),
+            Wrap(
+              spacing: AdminSpacing.sm,
+              runSpacing: AdminSpacing.sm,
+              children: _chips,
+            ),
+          ],
+        );
+      },
     );
   }
 
