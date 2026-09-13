@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/auth/admin_session.dart';
 import '../../core/theme/admin_colors.dart';
 import '../affiliate/screens/affiliate_screen.dart';
-import '../cashback_settings/screens/cashback_settings_screen.dart';
+import '../cashback_settings/screens/cashback_networks_screen.dart';
 import '../cashbacks/screens/cashback_review_screen.dart';
 import '../categories/screens/categories_screen.dart';
 import '../dashboard/screens/dashboard_screen.dart';
@@ -276,7 +276,7 @@ class _AdminShellState extends State<AdminShell> {
       case _Section.offers:
         return const OffersScreen();
       case _Section.cashbackSettings:
-        return const CashbackSettingsScreen();
+        return const CashbackNetworksScreen();
       case _Section.affiliate:
         return const AffiliateScreen();
       case _Section.users:

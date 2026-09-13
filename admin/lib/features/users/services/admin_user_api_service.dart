@@ -1,4 +1,3 @@
-import '../../../core/network/api_exception.dart';
 import '../../../core/network/authorized_api_client.dart';
 import '../models/admin_user_lookup.dart';
 
@@ -10,33 +9,32 @@ class AdminUserApiService {
   final AuthorizedApiClient _client;
   final bool _ownsClient;
 
-  /// Returns null when no user has this email (backend 404).
-  Future<AdminUserLookup?> findByEmail(String email) async {
-    try {
-      final json = await _client.getJson(
-        '/api/admin/users?email=${Uri.encodeQueryComponent(email)}',
-      );
-      return AdminUserLookup.fromJson(json as Map<String, dynamic>);
-    } on ApiException catch (error) {
-      if (error.isNotFound) return null;
-      rethrow;
-    }
+  Future<AdminUserPage> listUsers({int page = 1, int pageSize = 20}) async {
+    final json = await _client.getJson(
+      '/api/admin/users?page=$page&pageSize=$pageSize',
+    );
+    return AdminUserPage.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AdminUserDetail> getUserDetail(String userId) async {
+    final json = await _client.getJson('/api/admin/users/$userId');
+    return AdminUserDetail.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Returns the server-confirmed `isActive` value from the status endpoint's
+  /// `{ userId, email, isActive }` response.
+  Future<bool> setActive(String userId, bool isActive) async {
+    final json = await _client.postJson(
+      '/api/admin/users/$userId/status',
+      body: {'isActive': isActive},
+    );
+    final decoded = json as Map<String, dynamic>;
+    return decoded['isActive'] as bool? ?? isActive;
   }
 
   /// [role] must be "Customer" or "Admin" — the backend rejects anything else.
-  Future<AdminUserLookup> changeRole(String userId, String role) async {
-    final json = await _client.postJson(
-      '/api/admin/users/$userId/role',
-      body: {'role': role},
-    );
-    final decoded = json as Map<String, dynamic>;
-    return AdminUserLookup(
-      userId: '${decoded['userId']}',
-      email: decoded['email'] as String? ?? '',
-      fullName: '',
-      role: decoded['role'] as String? ?? '',
-      isActive: true,
-    );
+  Future<void> changeRole(String userId, String role) async {
+    await _client.postJson('/api/admin/users/$userId/role', body: {'role': role});
   }
 
   void dispose() {

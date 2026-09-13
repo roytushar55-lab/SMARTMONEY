@@ -26,6 +26,16 @@ class AdminColors {
   static const successHover = Color(0xFF0C9F56);
   static const warning = Color(0xFFF59E0B);
   static const danger = Color(0xFFEF4444);
+
+  /// The mobile app's login-screen gradient (purple to white to a hint of
+  /// green), reused for the admin login screen so both apps read as the
+  /// same product on the one page a user sees before they're "in" either.
+  static const backgroundGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFFF1EAFF), Color(0xFFFEFCFF), Color(0xFFF0FFF7)],
+    stops: [0.0, 0.52, 1.0],
+  );
 }
 
 class AdminSpacing {
@@ -54,4 +64,8 @@ class AdminBreakpoints {
   AdminBreakpoints._();
 
   static const mobile = 720.0;
+
+  /// Below this width the login screen collapses to a single column and
+  /// drops the marketing side panel.
+  static const loginSplit = 960.0;
 }

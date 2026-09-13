@@ -317,6 +317,49 @@ namespace SmartMoney.Infrastructure.Persistence.Migrations
                     b.ToTable("Cashbacks", (string)null);
                 });
 
+            modelBuilder.Entity("SmartMoney.Domain.Entities.CashbackRateOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AffiliateNetworkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ConfirmationWindowDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("UserSharePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("StoreId");
+
+                    b.HasIndex("AffiliateNetworkId", "StoreId", "CategoryId")
+                        .IsUnique();
+
+                    b.ToTable("CashbackRateOverrides", (string)null);
+                });
+
             modelBuilder.Entity("SmartMoney.Domain.Entities.CashbackSettings", b =>
                 {
                     b.Property<Guid>("Id")
@@ -430,6 +473,36 @@ namespace SmartMoney.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId", "IsUsed", "ExpiresAt");
 
                     b.ToTable("EmailVerificationOtps", (string)null);
+                });
+
+            modelBuilder.Entity("SmartMoney.Domain.Entities.NetworkCashbackSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AffiliateNetworkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ConfirmationWindowDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("UserSharePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AffiliateNetworkId")
+                        .IsUnique();
+
+                    b.ToTable("NetworkCashbackSettings", (string)null);
                 });
 
             modelBuilder.Entity("SmartMoney.Domain.Entities.Offer", b =>
@@ -1038,6 +1111,32 @@ namespace SmartMoney.Infrastructure.Persistence.Migrations
                     b.Navigation("Wallet");
                 });
 
+            modelBuilder.Entity("SmartMoney.Domain.Entities.CashbackRateOverride", b =>
+                {
+                    b.HasOne("SmartMoney.Domain.Entities.AffiliateNetwork", "AffiliateNetwork")
+                        .WithMany()
+                        .HasForeignKey("AffiliateNetworkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SmartMoney.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("SmartMoney.Domain.Entities.Store", "Store")
+                        .WithMany()
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AffiliateNetwork");
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Store");
+                });
+
             modelBuilder.Entity("SmartMoney.Domain.Entities.EmailVerificationOtp", b =>
                 {
                     b.HasOne("SmartMoney.Domain.Entities.User", "User")
@@ -1047,6 +1146,17 @@ namespace SmartMoney.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartMoney.Domain.Entities.NetworkCashbackSettings", b =>
+                {
+                    b.HasOne("SmartMoney.Domain.Entities.AffiliateNetwork", "AffiliateNetwork")
+                        .WithMany()
+                        .HasForeignKey("AffiliateNetworkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AffiliateNetwork");
                 });
 
             modelBuilder.Entity("SmartMoney.Domain.Entities.Offer", b =>

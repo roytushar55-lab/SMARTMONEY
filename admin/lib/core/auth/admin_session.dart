@@ -38,7 +38,14 @@ class AdminSession {
   /// screen surfaces the message. Throws a plain [StateError] when the
   /// account authenticates but isn't Admin/SuperAdmin, since that's a
   /// business rule this app enforces, not a network failure.
-  Future<void> login(String email, String password) async {
+  ///
+  /// When [rememberMe] is false, the session lives only in memory: nothing
+  /// is written to storage, so a page reload signs the admin back out.
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberMe = true,
+  }) async {
     final response = await _authApi.login(email, password);
 
     final parsed = JwtClaims.tryParse(response.accessToken);
@@ -46,11 +53,13 @@ class AdminSession {
       throw StateError('This account does not have admin access.');
     }
 
-    await _tokenStorage.saveTokens(
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      accessTokenExpiresAt: response.accessTokenExpiresAt,
-    );
+    if (rememberMe) {
+      await _tokenStorage.saveTokens(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        accessTokenExpiresAt: response.accessTokenExpiresAt,
+      );
+    }
 
     claims.value = parsed;
   }

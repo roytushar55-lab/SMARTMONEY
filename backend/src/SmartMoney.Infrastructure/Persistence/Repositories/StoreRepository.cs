@@ -125,4 +125,14 @@ public sealed class StoreRepository : IStoreRepository
                     (excludeId == null || store.Id != excludeId))
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<Guid?> GetPrimaryCategoryIdAsync(Guid storeId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.StoreCategories
+            .AsNoTracking()
+            .Where(storeCategory => storeCategory.StoreId == storeId)
+            .OrderBy(storeCategory => storeCategory.CategoryId)
+            .Select(storeCategory => (Guid?)storeCategory.CategoryId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

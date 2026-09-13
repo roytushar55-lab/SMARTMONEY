@@ -74,6 +74,18 @@ class AuthorizedApiClient {
     );
   }
 
+  Future<dynamic> deleteJson(String path) async {
+    final response = await delete(path);
+    return _decode(response);
+  }
+
+  Future<http.Response> delete(String path) {
+    return sendAuthorizedRequest(
+      (headers) =>
+          _client.delete(Uri.parse('$baseUrl$path'), headers: headers),
+    );
+  }
+
   dynamic _decode(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(

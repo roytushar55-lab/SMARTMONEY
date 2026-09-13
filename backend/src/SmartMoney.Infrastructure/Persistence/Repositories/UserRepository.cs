@@ -77,4 +77,23 @@ public sealed class UserRepository : IUserRepository
     {
         await _context.Users.AddAsync(user, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<User>> ListAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .Include(user => user.Role)
+            .OrderByDescending(user => user.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        return _context.Users.CountAsync(cancellationToken);
+    }
 }

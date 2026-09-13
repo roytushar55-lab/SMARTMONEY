@@ -1,4 +1,5 @@
 using Moq;
+using SmartMoney.Application.Abstractions.CashbackRates;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Application.Features.Affiliate.IngestAffiliateConversion;
 using SmartMoney.Domain.Entities;
@@ -9,19 +10,22 @@ namespace SmartMoney.Application.Tests.Affiliate;
 public sealed class ConversionCashbackProcessorTests
 {
     private readonly Mock<ICashbackRepository> _cashbacks = new();
-    private readonly Mock<ICashbackSettingsRepository> _settings = new();
+    private readonly Mock<ICashbackRateResolver> _rateResolver = new();
+    private readonly Mock<IStoreRepository> _stores = new();
     private readonly Mock<IWalletRepository> _wallets = new();
     private readonly Mock<IAffiliateClickRepository> _clicks = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactions = new();
 
     private readonly Guid _clickId = Guid.NewGuid();
     private readonly Guid _userId = Guid.NewGuid();
+    private readonly Guid _storeId = Guid.NewGuid();
+    private readonly Guid _networkId = Guid.NewGuid();
 
     private ConversionCashbackProcessor CreateProcessor()
     {
         return new ConversionCashbackProcessor(
-            _cashbacks.Object, _settings.Object, _wallets.Object, _clicks.Object,
-            _walletTransactions.Object);
+            _cashbacks.Object, _rateResolver.Object, _stores.Object, _wallets.Object,
+            _clicks.Object, _walletTransactions.Object);
     }
 
     private AffiliateConversion NewConversion(
@@ -31,7 +35,7 @@ public sealed class ConversionCashbackProcessorTests
     {
         return new AffiliateConversion
         {
-            AffiliateNetworkId = Guid.NewGuid(),
+            AffiliateNetworkId = _networkId,
             AffiliateClickId = attributed ? _clickId : null,
             NetworkTransactionId = "TXN-1",
             NetworkStatus = status,
@@ -43,15 +47,21 @@ public sealed class ConversionCashbackProcessorTests
         decimal sharePercent = 60.00m,
         Wallet? existingWallet = null)
     {
-        _settings.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CashbackSettings
-            {
-                UserSharePercent = sharePercent,
-                ConfirmationWindowDays = 60,
-            });
+        _rateResolver.Setup(r => r.ResolveEffectiveRateAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EffectiveCashbackRate(sharePercent, 60, CashbackRateSource.SystemGlobal));
+
+        _stores.Setup(s => s.GetPrimaryCategoryIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid?)null);
 
         _clicks.Setup(c => c.GetByIdAsync(_clickId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AffiliateClick { Id = _clickId, UserId = _userId });
+            .ReturnsAsync(new AffiliateClick
+            {
+                Id = _clickId,
+                UserId = _userId,
+                StoreId = _storeId,
+                AffiliateNetworkId = _networkId
+            });
 
         _wallets.Setup(w => w.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingWallet);

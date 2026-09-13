@@ -51,4 +51,14 @@ public interface ICashbackRepository
     Task<int> CountByUserIdAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Per-status cashback totals (row count + amount sum) for one user in a
+    /// single grouped query — used by the admin user detail endpoint instead
+    /// of one count+sum round-trip per status. A status with no cashbacks is
+    /// simply absent from the result.
+    /// </summary>
+    Task<IReadOnlyDictionary<CashbackStatus, (int Count, decimal Amount)>> GetStatusSummaryByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }
