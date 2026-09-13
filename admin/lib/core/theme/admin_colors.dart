@@ -49,3 +49,9 @@ class AdminRadius {
   static const input = 10.0;
   static const card = 16.0;
 }
+
+class AdminBreakpoints {
+  AdminBreakpoints._();
+
+  static const mobile = 720.0;
+}

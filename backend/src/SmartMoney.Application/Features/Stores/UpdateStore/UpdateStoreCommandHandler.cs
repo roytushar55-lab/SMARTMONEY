@@ -1,5 +1,6 @@
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
+using SmartMoney.Application.Common;
 using SmartMoney.Application.Contracts.Stores;
 using SmartMoney.Application.Features.Stores.CreateStore;
 using SmartMoney.Domain.Entities;
@@ -64,6 +65,21 @@ public sealed class UpdateStoreCommandHandler
             !await _categoryRepository.AllExistAsync(categoryIds, cancellationToken))
         {
             throw new ArgumentException("One or more categories do not exist.");
+        }
+
+        int oldDisplayOrder = store.DisplayOrder;
+
+        if (command.DisplayOrder != oldDisplayOrder)
+        {
+            var siblings = await _storeRepository.GetTrackedByDisplayOrderRangeAsync(
+                Math.Min(oldDisplayOrder, command.DisplayOrder),
+                Math.Max(oldDisplayOrder, command.DisplayOrder),
+                excludeId: store.Id,
+                cancellationToken);
+
+            OrderShifter.ShiftForMove(
+                siblings, oldDisplayOrder, command.DisplayOrder,
+                s => s.DisplayOrder, (s, v) => s.DisplayOrder = v);
         }
 
         store.Name = name;

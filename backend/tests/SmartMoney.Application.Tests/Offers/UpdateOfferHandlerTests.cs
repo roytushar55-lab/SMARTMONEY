@@ -11,6 +11,13 @@ public sealed class UpdateOfferHandlerTests
     private readonly Mock<IOfferRepository> _offers = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
+    public UpdateOfferHandlerTests()
+    {
+        _offers.Setup(o => o.GetTrackedByPriorityRangeAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Offer>());
+    }
+
     private UpdateOfferCommandHandler CreateHandler()
     {
         return new UpdateOfferCommandHandler(
@@ -83,5 +90,39 @@ public sealed class UpdateOfferHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(CommandFor(offer), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task MoveForward_ShiftsIntermediateSiblingsBack()
+    {
+        var offer = ExistingOffer();
+        offer.Priority = 0;
+
+        var atOne = new Offer { StoreId = offer.StoreId, Store = offer.Store, Title = "A", Slug = "a", DestinationUrl = "https://a.com", Priority = 1 };
+        var atFive = new Offer { StoreId = offer.StoreId, Store = offer.Store, Title = "B", Slug = "b", DestinationUrl = "https://b.com", Priority = 5 };
+
+        _offers.Setup(o => o.GetTrackedByPriorityRangeAsync(
+                0, 5, offer.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Offer> { atOne, atFive });
+
+        var response = await CreateHandler().HandleAsync(CommandFor(offer), CancellationToken.None);
+
+        Assert.Equal(5, response!.Priority);
+        Assert.Equal(0, atOne.Priority);
+        Assert.Equal(4, atFive.Priority);
+    }
+
+    [Fact]
+    public async Task SameOrder_NoSiblingQueryOrShift()
+    {
+        var offer = ExistingOffer();
+        offer.Priority = 5;
+
+        await CreateHandler().HandleAsync(CommandFor(offer), CancellationToken.None);
+
+        _offers.Verify(
+            o => o.GetTrackedByPriorityRangeAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

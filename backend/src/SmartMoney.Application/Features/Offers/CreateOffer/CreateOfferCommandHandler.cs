@@ -61,6 +61,13 @@ public sealed class CreateOfferCommandHandler
             throw new InvalidOperationException($"The slug \"{slug}\" is already in use.");
         }
 
+        var siblings = await _offerRepository.GetTrackedByPriorityRangeAsync(
+            command.Priority, int.MaxValue, excludeId: null, cancellationToken);
+
+        OrderShifter.ShiftForInsert(
+            siblings, command.Priority,
+            o => o.Priority, (o, v) => o.Priority = v);
+
         var offer = new Offer
         {
             StoreId = store.Id,

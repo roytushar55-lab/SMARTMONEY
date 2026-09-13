@@ -111,4 +111,18 @@ public sealed class StoreRepository : IStoreRepository
                     (excludeId == null || store.Id != excludeId),
                 cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Store>> GetTrackedByDisplayOrderRangeAsync(
+        int minOrder,
+        int maxOrder,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Stores
+            .Where(
+                store => store.DisplayOrder >= minOrder &&
+                    store.DisplayOrder <= maxOrder &&
+                    (excludeId == null || store.Id != excludeId))
+            .ToListAsync(cancellationToken);
+    }
 }

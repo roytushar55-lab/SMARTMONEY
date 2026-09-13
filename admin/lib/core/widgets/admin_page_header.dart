@@ -22,29 +22,43 @@ class AdminPageHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Row(
+    final titleColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
+        Text(title, style: textTheme.headlineSmall),
+        if (description != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            description!,
+            style: const TextStyle(color: AdminColors.textMuted, fontSize: 13),
+          ),
+        ],
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < AdminBreakpoints.mobile;
+
+        if (isMobile && action != null) {
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: textTheme.headlineSmall),
-              if (description != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  description!,
-                  style: const TextStyle(
-                    color: AdminColors.textMuted,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+              titleColumn,
+              const SizedBox(height: AdminSpacing.md),
+              action!,
             ],
-          ),
-        ),
-        ?action,
-      ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: titleColumn),
+            ?action,
+          ],
+        );
+      },
     );
   }
 }

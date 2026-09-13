@@ -76,6 +76,20 @@ public sealed class CategoryRepository : ICategoryRepository
                 cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Category>> GetTrackedByDisplayOrderRangeAsync(
+        int minOrder,
+        int maxOrder,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Categories
+            .Where(
+                category => category.DisplayOrder >= minOrder &&
+                    category.DisplayOrder <= maxOrder &&
+                    (excludeId == null || category.Id != excludeId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> AllExistAsync(
         IEnumerable<Guid> ids,
         CancellationToken cancellationToken = default)

@@ -1,5 +1,6 @@
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
+using SmartMoney.Application.Common;
 using SmartMoney.Application.Contracts.Offers;
 using SmartMoney.Application.Features.Offers.CreateOffer;
 using SmartMoney.Domain.Enums;
@@ -47,6 +48,21 @@ public sealed class UpdateOfferCommandHandler
         if (await _offerRepository.SlugExistsAsync(slug, offer.Id, cancellationToken))
         {
             throw new InvalidOperationException($"The slug \"{slug}\" is already in use.");
+        }
+
+        int oldPriority = offer.Priority;
+
+        if (command.Priority != oldPriority)
+        {
+            var siblings = await _offerRepository.GetTrackedByPriorityRangeAsync(
+                Math.Min(oldPriority, command.Priority),
+                Math.Max(oldPriority, command.Priority),
+                excludeId: offer.Id,
+                cancellationToken);
+
+            OrderShifter.ShiftForMove(
+                siblings, oldPriority, command.Priority,
+                o => o.Priority, (o, v) => o.Priority = v);
         }
 
         offer.Title = command.Title.Trim();

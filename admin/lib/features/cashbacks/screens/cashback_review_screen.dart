@@ -225,6 +225,8 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
               columns: const [
                 DataColumn(label: Text('User')),
                 DataColumn(label: Text('Store')),
+                DataColumn(label: Text('Order value')),
+                DataColumn(label: Text('Commission')),
                 DataColumn(label: Text('Amount')),
                 DataColumn(label: Text('Status')),
                 DataColumn(label: Text('Network status')),
@@ -249,6 +251,22 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
       cells: [
         DataCell(Text(cashback.userEmail)),
         DataCell(Text(cashback.storeName ?? '—')),
+        DataCell(
+          Text(
+            cashback.orderAmount == null
+                ? '—'
+                : '₹${cashback.orderAmount!.toStringAsFixed(2)}',
+            style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
+          ),
+        ),
+        DataCell(
+          Text(
+            cashback.commissionAmount == null
+                ? '—'
+                : '₹${cashback.commissionAmount!.toStringAsFixed(2)}',
+            style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
+          ),
+        ),
         DataCell(
           Text(
             '₹${cashback.cashbackAmount.toStringAsFixed(2)}',

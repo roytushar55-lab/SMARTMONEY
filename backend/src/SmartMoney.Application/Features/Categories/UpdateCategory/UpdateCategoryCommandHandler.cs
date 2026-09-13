@@ -1,5 +1,6 @@
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
+using SmartMoney.Application.Common;
 using SmartMoney.Application.Contracts.Categories;
 using SmartMoney.Application.Features.Categories.CreateCategory;
 
@@ -53,6 +54,21 @@ public sealed class UpdateCategoryCommandHandler
         if (await _categoryRepository.SlugExistsAsync(slug, category.Id, cancellationToken))
         {
             throw new InvalidOperationException($"The slug \"{slug}\" is already in use.");
+        }
+
+        int oldDisplayOrder = category.DisplayOrder;
+
+        if (command.DisplayOrder != oldDisplayOrder)
+        {
+            var siblings = await _categoryRepository.GetTrackedByDisplayOrderRangeAsync(
+                Math.Min(oldDisplayOrder, command.DisplayOrder),
+                Math.Max(oldDisplayOrder, command.DisplayOrder),
+                excludeId: category.Id,
+                cancellationToken);
+
+            OrderShifter.ShiftForMove(
+                siblings, oldDisplayOrder, command.DisplayOrder,
+                c => c.DisplayOrder, (c, v) => c.DisplayOrder = v);
         }
 
         category.Name = name;

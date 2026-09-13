@@ -27,7 +27,6 @@ class AdminStatCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AdminRadius.card),
       child: Container(
-        width: 220,
         padding: const EdgeInsets.all(AdminSpacing.lg),
         decoration: BoxDecoration(
           color: AdminColors.surface,

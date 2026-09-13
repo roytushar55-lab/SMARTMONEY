@@ -10,6 +10,13 @@ public sealed class CreateCategoryHandlerTests
     private readonly Mock<ICategoryRepository> _categories = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
+    public CreateCategoryHandlerTests()
+    {
+        _categories.Setup(c => c.GetTrackedByDisplayOrderRangeAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Category>());
+    }
+
     private CreateCategoryCommandHandler CreateHandler()
     {
         return new CreateCategoryCommandHandler(
@@ -77,5 +84,24 @@ public sealed class CreateCategoryHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Collision_ShiftsExistingSiblingsDown()
+    {
+        var atTwo = new Category { Name = "Electronics", Slug = "electronics", DisplayOrder = 2 };
+        var atThree = new Category { Name = "Travel", Slug = "travel", DisplayOrder = 3 };
+
+        _categories.Setup(c => c.GetTrackedByDisplayOrderRangeAsync(
+                2, int.MaxValue, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Category> { atTwo, atThree });
+
+        var command = new CreateCategoryCommand("Fashion", null, null, null, 2);
+
+        var response = await CreateHandler().HandleAsync(command, CancellationToken.None);
+
+        Assert.Equal(2, response.DisplayOrder);
+        Assert.Equal(3, atTwo.DisplayOrder);
+        Assert.Equal(4, atThree.DisplayOrder);
     }
 }

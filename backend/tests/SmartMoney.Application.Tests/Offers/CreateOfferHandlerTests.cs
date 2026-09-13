@@ -17,6 +17,9 @@ public sealed class CreateOfferHandlerTests
     {
         _stores.Setup(s => s.GetByIdAsync(_store.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_store);
+        _offers.Setup(o => o.GetTrackedByPriorityRangeAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Offer>());
     }
 
     private CreateOfferCommandHandler CreateHandler()
@@ -85,5 +88,34 @@ public sealed class CreateOfferHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(ValidCommand(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Collision_ShiftsExistingSiblingsDown()
+    {
+        var atOne = new Offer { StoreId = _store.Id, Store = _store, Title = "A", Slug = "a", DestinationUrl = "https://a.com", Priority = 1 };
+        var atTwo = new Offer { StoreId = _store.Id, Store = _store, Title = "B", Slug = "b", DestinationUrl = "https://b.com", Priority = 2 };
+
+        _offers.Setup(o => o.GetTrackedByPriorityRangeAsync(
+                1, int.MaxValue, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Offer> { atOne, atTwo });
+
+        var response = await CreateHandler().HandleAsync(ValidCommand(), CancellationToken.None);
+
+        Assert.Equal(1, response!.Priority);
+        Assert.Equal(2, atOne.Priority);
+        Assert.Equal(3, atTwo.Priority);
+    }
+
+    [Fact]
+    public async Task InvalidOfferType_NeverQueriesForPriorityShift()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            CreateHandler().HandleAsync(ValidCommand(offerType: "NotARealType"), CancellationToken.None));
+
+        _offers.Verify(
+            o => o.GetTrackedByPriorityRangeAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

@@ -28,6 +28,13 @@ public interface ICategoryRepository
         Guid? excludeId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Tracked. Categories whose DisplayOrder falls in [minOrder, maxOrder], for shifting.</summary>
+    Task<IReadOnlyList<Category>> GetTrackedByDisplayOrderRangeAsync(
+        int minOrder,
+        int maxOrder,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>True only if every id in <paramref name="ids"/> exists.</summary>
     Task<bool> AllExistAsync(
         IEnumerable<Guid> ids,

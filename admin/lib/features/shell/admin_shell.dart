@@ -50,20 +50,53 @@ class _AdminShellState extends State<AdminShell> {
     final claims = AdminSession.instance.claims.value;
     final isSuperAdmin = claims?.isSuperAdmin ?? false;
 
-    return Scaffold(
-      backgroundColor: AdminColors.bgPrimary,
-      body: Row(
-        children: [
-          _buildSidebar(isSuperAdmin, claims?.email),
-          Expanded(child: _buildContent()),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < AdminBreakpoints.mobile;
+
+        if (isMobile) {
+          return Scaffold(
+            backgroundColor: AdminColors.bgPrimary,
+            appBar: AppBar(
+              backgroundColor: AdminColors.surface,
+              foregroundColor: AdminColors.textPrimary,
+              elevation: 0,
+              toolbarHeight: 48,
+            ),
+            drawer: Drawer(
+              width: 232,
+              child: SafeArea(
+                child: _buildSidebar(
+                  isSuperAdmin,
+                  claims?.email,
+                  isDrawer: true,
+                ),
+              ),
+            ),
+            body: _buildContent(),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: AdminColors.bgPrimary,
+          body: Row(
+            children: [
+              _buildSidebar(isSuperAdmin, claims?.email),
+              Expanded(child: _buildContent()),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSidebar(bool isSuperAdmin, String? email) {
+  Widget _buildSidebar(
+    bool isSuperAdmin,
+    String? email, {
+    bool isDrawer = false,
+  }) {
     return Container(
-      width: 232,
+      width: isDrawer ? null : 232,
       color: AdminColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -77,32 +110,16 @@ class _AdminShellState extends State<AdminShell> {
             ),
             child: Row(
               children: [
-                Container(
+                Image.asset(
+                  'assets/images/smartmoney_mark.png',
                   width: 32,
                   height: 32,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AdminColors.primary,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Text(
-                    'S',
-                    style: TextStyle(
-                      color: AdminColors.onPrimary,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
-                  ),
                 ),
                 const SizedBox(width: AdminSpacing.sm),
-                const Text(
-                  'SmartMoney',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AdminColors.textPrimary,
-                    letterSpacing: -0.2,
-                  ),
+                Image.asset(
+                  'assets/images/smartmoney_wordmark.png',
+                  height: 16,
+                  fit: BoxFit.contain,
                 ),
               ],
             ),
@@ -190,7 +207,10 @@ class _AdminShellState extends State<AdminShell> {
             : Colors.transparent,
         borderRadius: BorderRadius.circular(AdminRadius.input),
         child: InkWell(
-          onTap: () => _goTo(section),
+          onTap: () {
+            _goTo(section);
+            if (Navigator.canPop(context)) Navigator.pop(context);
+          },
           borderRadius: BorderRadius.circular(AdminRadius.input),
           child: Padding(
             padding: const EdgeInsets.symmetric(

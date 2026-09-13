@@ -26,4 +26,11 @@ public interface IStoreRepository
         string slug,
         Guid? excludeId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Tracked. Stores whose DisplayOrder falls in [minOrder, maxOrder], for shifting.</summary>
+    Task<IReadOnlyList<Store>> GetTrackedByDisplayOrderRangeAsync(
+        int minOrder,
+        int maxOrder,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default);
 }

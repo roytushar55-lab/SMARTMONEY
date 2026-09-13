@@ -67,6 +67,8 @@ flutter:
 
   assets:
     - assets/images/smartmoney_logo.png
+    - assets/images/smartmoney_mark.png
+    - assets/images/smartmoney_wordmark.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

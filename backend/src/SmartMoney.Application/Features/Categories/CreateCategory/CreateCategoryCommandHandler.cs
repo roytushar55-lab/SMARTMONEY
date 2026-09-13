@@ -54,6 +54,13 @@ public sealed class CreateCategoryCommandHandler
             throw new InvalidOperationException($"The slug \"{slug}\" is already in use.");
         }
 
+        var siblings = await _categoryRepository.GetTrackedByDisplayOrderRangeAsync(
+            command.DisplayOrder, int.MaxValue, excludeId: null, cancellationToken);
+
+        OrderShifter.ShiftForInsert(
+            siblings, command.DisplayOrder,
+            c => c.DisplayOrder, (c, v) => c.DisplayOrder = v);
+
         var category = new Category
         {
             Name = name,

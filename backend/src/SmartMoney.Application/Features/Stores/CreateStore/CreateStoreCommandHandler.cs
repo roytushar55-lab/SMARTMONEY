@@ -65,6 +65,13 @@ public sealed class CreateStoreCommandHandler
             throw new ArgumentException("One or more categories do not exist.");
         }
 
+        var siblings = await _storeRepository.GetTrackedByDisplayOrderRangeAsync(
+            command.DisplayOrder, int.MaxValue, excludeId: null, cancellationToken);
+
+        OrderShifter.ShiftForInsert(
+            siblings, command.DisplayOrder,
+            s => s.DisplayOrder, (s, v) => s.DisplayOrder = v);
+
         var store = new Store
         {
             Name = name,

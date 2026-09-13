@@ -24,4 +24,11 @@ public interface IOfferRepository
         string slug,
         Guid? excludeId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Tracked, global (not store-scoped). Offers whose Priority falls in [minOrder, maxOrder], for shifting.</summary>
+    Task<IReadOnlyList<Offer>> GetTrackedByPriorityRangeAsync(
+        int minOrder,
+        int maxOrder,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default);
 }

@@ -109,12 +109,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return ErrorView(message: _errorMessage, onRetry: _load);
       case ViewState.empty:
       case ViewState.success:
-        return Wrap(
-          spacing: AdminSpacing.lg,
-          runSpacing: AdminSpacing.lg,
-          children: kCashbackStatusFilters
-              .map((status) => _buildCard(status, _counts[status] ?? 0))
-              .toList(),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < AdminBreakpoints.mobile;
+            final crossAxisCount = isMobile
+                ? 2
+                : constraints.maxWidth < 1000
+                ? 3
+                : 4;
+
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: AdminSpacing.lg,
+                crossAxisSpacing: AdminSpacing.lg,
+                childAspectRatio: isMobile ? 1.05 : 1.4,
+              ),
+              itemCount: kCashbackStatusFilters.length,
+              itemBuilder: (context, index) {
+                final status = kCashbackStatusFilters[index];
+                return _buildCard(status, _counts[status] ?? 0);
+              },
+            );
+          },
         );
     }
   }

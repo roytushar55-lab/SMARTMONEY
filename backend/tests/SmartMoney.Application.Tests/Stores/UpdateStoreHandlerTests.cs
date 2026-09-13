@@ -15,6 +15,9 @@ public sealed class UpdateStoreHandlerTests
     {
         _categories.Setup(c => c.AllExistAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        _stores.Setup(s => s.GetTrackedByDisplayOrderRangeAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Store>());
     }
 
     private UpdateStoreCommandHandler CreateHandler()
@@ -93,5 +96,41 @@ public sealed class UpdateStoreHandlerTests
 
         Assert.Null(response);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task MoveForward_ShiftsIntermediateSiblingsBack()
+    {
+        var store = ExistingStore();
+        store.DisplayOrder = 0;
+
+        var atOne = new Store { Name = "A", Slug = "a", WebsiteUrl = "https://a.com", DisplayOrder = 1 };
+        var atTwo = new Store { Name = "B", Slug = "b", WebsiteUrl = "https://b.com", DisplayOrder = 2 };
+
+        _stores.Setup(s => s.GetTrackedByDisplayOrderRangeAsync(
+                0, 2, store.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Store> { atOne, atTwo });
+
+        var response = await CreateHandler().HandleAsync(
+            CommandFor(store, Array.Empty<Guid>()), CancellationToken.None);
+
+        Assert.Equal(2, response!.DisplayOrder);
+        Assert.Equal(0, atOne.DisplayOrder);
+        Assert.Equal(1, atTwo.DisplayOrder);
+    }
+
+    [Fact]
+    public async Task SameOrder_NoSiblingQueryOrShift()
+    {
+        var store = ExistingStore();
+        store.DisplayOrder = 2;
+
+        await CreateHandler().HandleAsync(
+            CommandFor(store, Array.Empty<Guid>()), CancellationToken.None);
+
+        _stores.Verify(
+            s => s.GetTrackedByDisplayOrderRangeAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

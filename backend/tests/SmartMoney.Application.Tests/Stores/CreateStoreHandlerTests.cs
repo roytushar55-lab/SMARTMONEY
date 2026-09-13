@@ -15,6 +15,9 @@ public sealed class CreateStoreHandlerTests
     {
         _categories.Setup(c => c.AllExistAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        _stores.Setup(s => s.GetTrackedByDisplayOrderRangeAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Store>());
     }
 
     private CreateStoreCommandHandler CreateHandler()
@@ -90,5 +93,22 @@ public sealed class CreateStoreHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(ValidCommand(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Collision_ShiftsExistingSiblingsDown()
+    {
+        var atOne = new Store { Name = "Flipkart", Slug = "flipkart", WebsiteUrl = "https://flipkart.com", DisplayOrder = 1 };
+        var atTwo = new Store { Name = "Amazon", Slug = "amazon", WebsiteUrl = "https://amazon.in", DisplayOrder = 2 };
+
+        _stores.Setup(s => s.GetTrackedByDisplayOrderRangeAsync(
+                1, int.MaxValue, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Store> { atOne, atTwo });
+
+        var response = await CreateHandler().HandleAsync(ValidCommand(), CancellationToken.None);
+
+        Assert.Equal(1, response.DisplayOrder);
+        Assert.Equal(2, atOne.DisplayOrder);
+        Assert.Equal(3, atTwo.DisplayOrder);
     }
 }

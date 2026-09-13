@@ -163,4 +163,18 @@ public sealed class OfferRepository : IOfferRepository
                     (excludeId == null || offer.Id != excludeId),
                 cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Offer>> GetTrackedByPriorityRangeAsync(
+        int minOrder,
+        int maxOrder,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Offers
+            .Where(
+                offer => offer.Priority >= minOrder &&
+                    offer.Priority <= maxOrder &&
+                    (excludeId == null || offer.Id != excludeId))
+            .ToListAsync(cancellationToken);
+    }
 }

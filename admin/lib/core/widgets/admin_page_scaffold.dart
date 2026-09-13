@@ -16,14 +16,21 @@ class AdminPageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AdminSpacing.xxl),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: child,
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < AdminBreakpoints.mobile;
+        return Padding(
+          padding: EdgeInsets.all(
+            isMobile ? AdminSpacing.lg : AdminSpacing.xxl,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 }
