@@ -12,6 +12,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.Configure<SupabaseStorageOptions>(
     builder.Configuration.GetSection(SupabaseStorageOptions.SectionName));
 builder.Services.AddHttpClient<IProfilePhotoStorage, SupabaseProfilePhotoStorage>();
+builder.Services.AddHttpClient<ICatalogueMediaStorage, SupabaseCatalogueMediaStorage>();
 
 // Add services to the container.
 // Framework Services

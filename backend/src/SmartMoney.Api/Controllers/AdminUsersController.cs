@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Contracts.Identity.ChangeUserRole;
 using SmartMoney.Application.Features.Identity.ChangeUserRole;
+using SmartMoney.Application.Features.Identity.GetUserByEmail;
 
 namespace SmartMoney.Api.Controllers;
 
@@ -12,11 +13,32 @@ namespace SmartMoney.Api.Controllers;
 public sealed class AdminUsersController : ControllerBase
 {
     private readonly ICommandHandler<ChangeUserRoleCommand, ChangeUserRoleResponse?> _changeRoleHandler;
+    private readonly IQueryHandler<GetUserByEmailQuery, AdminUserLookupResponse?> _lookupHandler;
 
     public AdminUsersController(
-        ICommandHandler<ChangeUserRoleCommand, ChangeUserRoleResponse?> changeRoleHandler)
+        ICommandHandler<ChangeUserRoleCommand, ChangeUserRoleResponse?> changeRoleHandler,
+        IQueryHandler<GetUserByEmailQuery, AdminUserLookupResponse?> lookupHandler)
     {
         _changeRoleHandler = changeRoleHandler;
+        _lookupHandler = lookupHandler;
+    }
+
+    [HttpGet("api/admin/users")]
+    [ProducesResponseType(typeof(AdminUserLookupResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AdminUserLookupResponse>> GetByEmail(
+        [FromQuery] string email,
+        CancellationToken cancellationToken)
+    {
+        var user = await _lookupHandler.HandleAsync(
+            new GetUserByEmailQuery(email), cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound(new { message = "No user with that email." });
+        }
+
+        return Ok(user);
     }
 
     [HttpPost("api/admin/users/{id:guid}/role")]

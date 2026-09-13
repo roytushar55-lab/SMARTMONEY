@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "smartmoney-admin",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Users\\royap\\SMARTMONEY\\admin && flutter run -d web-server --web-port 5180"
+      ],
+      "port": 5180
+    }
+  ]
+}

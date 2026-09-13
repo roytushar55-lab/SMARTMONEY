@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Domain.Entities;
@@ -115,6 +115,66 @@ public sealed class OfferRepository : IOfferRepository
             .OrderByDescending(offer => offer.IsFeatured)
             .ThenBy(offer => offer.Priority)
             .ThenBy(offer => offer.Title)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Offer>> GetAllAsync(
+        Guid? storeId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.Offers
+            .AsNoTracking()
+            .Include(offer => offer.Store)
+            .AsQueryable();
+
+        if (storeId is Guid filterStoreId)
+        {
+            query = query.Where(offer => offer.StoreId == filterStoreId);
+        }
+
+        return await query
+            .OrderByDescending(offer => offer.IsFeatured)
+            .ThenBy(offer => offer.Priority)
+            .ThenBy(offer => offer.Title)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Offer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Offers
+            .Include(offer => offer.Store)
+            .FirstOrDefaultAsync(offer => offer.Id == id, cancellationToken);
+    }
+
+    public async Task AddAsync(Offer offer, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.Offers.AddAsync(offer, cancellationToken);
+    }
+
+    public async Task<bool> SlugExistsAsync(
+        string slug,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Offers
+            .AsNoTracking()
+            .AnyAsync(
+                offer => offer.Slug == slug &&
+                    (excludeId == null || offer.Id != excludeId),
+                cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Offer>> GetTrackedByPriorityRangeAsync(
+        int minOrder,
+        int maxOrder,
+        Guid? excludeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Offers
+            .Where(
+                offer => offer.Priority >= minOrder &&
+                    offer.Priority <= maxOrder &&
+                    (excludeId == null || offer.Id != excludeId))
             .ToListAsync(cancellationToken);
     }
 }

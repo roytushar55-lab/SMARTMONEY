@@ -9,4 +9,7 @@ public interface ICashbackSettingsRepository
     /// seeded; callers should treat that as "cashback generation disabled".
     /// </summary>
     Task<CashbackSettings?> GetAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Change-tracked — for the admin update handler to mutate and save.</summary>
+    Task<CashbackSettings?> GetTrackedAsync(CancellationToken cancellationToken = default);
 }
