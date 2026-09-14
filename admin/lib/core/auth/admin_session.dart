@@ -39,8 +39,13 @@ class AdminSession {
   /// account authenticates but isn't Admin/SuperAdmin, since that's a
   /// business rule this app enforces, not a network failure.
   ///
-  /// When [rememberMe] is false, the session lives only in memory: nothing
-  /// is written to storage, so a page reload signs the admin back out.
+  /// [rememberMe] only chooses where the tokens live. Checked: durable
+  /// storage that survives closing the browser/app. Unchecked: the session
+  /// tier (browser `sessionStorage`, or memory on native), which survives a
+  /// page refresh but is gone once the tab closes. Tokens are always saved,
+  /// because every authorized request reads them back through
+  /// [TokenStorageService] — an unsaved login would look signed in while
+  /// every API call failed with 401.
   Future<void> login(
     String email,
     String password, {
@@ -53,13 +58,12 @@ class AdminSession {
       throw StateError('This account does not have admin access.');
     }
 
-    if (rememberMe) {
-      await _tokenStorage.saveTokens(
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        accessTokenExpiresAt: response.accessTokenExpiresAt,
-      );
-    }
+    await _tokenStorage.saveTokens(
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      accessTokenExpiresAt: response.accessTokenExpiresAt,
+      persistent: rememberMe,
+    );
 
     claims.value = parsed;
   }

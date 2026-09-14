@@ -152,6 +152,11 @@ class AuthorizedApiClient {
       return false;
     }
 
+    // Decide the tier BEFORE the network call: the refresh lands in the same
+    // tier the login used, so an unchecked "keep me signed in" never gets
+    // silently upgraded to a durable session by a routine token refresh.
+    final persistent = await _tokenStorageService.isPersistent();
+
     try {
       final response = await _authApiService.refreshToken(storedRefreshToken);
 
@@ -159,6 +164,7 @@ class AuthorizedApiClient {
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
         accessTokenExpiresAt: response.accessTokenExpiresAt,
+        persistent: persistent,
       );
 
       return true;
