@@ -11,7 +11,6 @@ import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../../../core/widgets/network_image_with_fallback.dart';
-import '../../../../core/widgets/profile_avatar.dart';
 import '../../../../core/widgets/view_state.dart';
 import '../../../browsing/data/models/category.dart';
 import '../../../browsing/data/models/offer_list_item.dart';
@@ -462,7 +461,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  /// Frozen block at the top of the dashboard: menu button, logo, profile and
+  /// Frozen block at the top of the dashboard: menu button, logo and
   /// the search bar. Painted over the scrolling content, with a soft shadow so
   /// sections passing underneath read as being behind it.
   Widget _buildPinnedHeader() {
@@ -546,66 +545,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ),
-              if (!isCompact) ...[
-                const SizedBox(width: 10),
-              ],
-              _buildProfileSection(),
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildProfileSection() {
-    final colors = SmColors.of(context);
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: () {
-        final selectTab = widget.onSelectTab;
-        if (selectTab != null) {
-          selectTab(ShellTab.profile);
-          return;
-        }
-        Navigator.pushNamed(context, RouteNames.profile).then((_) {
-          _profileStore.refresh();
-        });
-      },
-      child: Container(
-        height: 46,
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-        decoration: BoxDecoration(
-          color: colors.surface.withValues(alpha: 0.76),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: colors.border),
-          boxShadow: [
-            BoxShadow(
-              color: colors.shadow.withValues(alpha: 0.10),
-              blurRadius: 32,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ValueListenableBuilder<ProfileSummary>(
-              valueListenable: _profileStore.summary,
-              builder: (context, profile, _) => ProfileAvatar(
-                initials: profile.initials,
-                imageUrl: profile.imageUrl,
-                size: 34,
-                fontSize: 12,
-              ),
-            ),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: colors.textMuted,
-              size: 18,
-            ),
-          ],
-        ),
       ),
     );
   }

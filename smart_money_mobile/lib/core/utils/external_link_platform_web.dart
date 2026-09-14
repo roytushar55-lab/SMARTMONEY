@@ -39,13 +39,19 @@ void closeReservedTab(Object? handle) {
 web.Window? _asWindow(Object? handle) {
   if (handle == null) return null;
 
-  // `as JSAny` is a cast (an assertion), not a runtime `is` check on an
-  // interop type, so it doesn't trigger the platform-consistency lint the
-  // way `is`/`is!` would; `isA<T>()` is then the actual, lint-recommended
-  // safe check. Always a genuine JS object here — the only producer of a
-  // non-null handle is this file's own reserveTab().
+  // Deliberately NOT `isA<web.Window>()`: that compiles to
+  // `handle instanceof Window` against THIS page's Window constructor, but
+  // `window.open()` returns a WindowProxy for a separate browsing context
+  // (another realm with its own Window constructor), so the check is false
+  // and the reserved tab was silently abandoned — the fallback then opened
+  // a second tab with url_launcher, leaving the blank one behind. The only
+  // producer of a non-null handle is this file's own reserveTab(), so a
+  // zero-cost extension-type cast is safe. `closed`, `close()` and setting
+  // `location.href` are all permitted on a cross-realm WindowProxy.
   final jsHandle = handle as JSAny;
-  if (!jsHandle.isA<web.Window>()) return null;
+  if (jsHandle.isUndefinedOrNull || !jsHandle.typeofEquals('object')) {
+    return null;
+  }
 
   return jsHandle as web.Window;
 }
