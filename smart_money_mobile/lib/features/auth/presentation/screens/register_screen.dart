@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
@@ -6,11 +7,11 @@ import '../../../../core/theme/sm_motion.dart';
 import '../../../../core/theme/sm_radius.dart';
 import '../../../../core/theme/sm_spacing.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
-import '../../../../core/widgets/google_sign_in_button.dart';
+import '../../../legal/data/legal_documents.dart';
+import '../../../legal/presentation/screens/legal_document_screen.dart';
 import '../../data/models/login_request.dart';
 import '../../data/models/register_request.dart';
 import '../../data/services/auth_api_service.dart';
-import '../../data/services/google_auth_service.dart';
 import '../../data/services/token_storage_service.dart';
 import '../widgets/otp_verification_dialog.dart';
 
@@ -25,7 +26,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _authApiService = AuthApiService();
   final _tokenStorageService = TokenStorageService();
-  final _googleAuthService = GoogleAuthService();
 
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -42,12 +42,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-  bool _isGoogleLoading = false;
 
-  bool get _isBusy => _isLoading || _isGoogleLoading;
+  bool _ageConfirmed = false;
+  bool _termsAccepted = false;
+
+  late final _termsLinkRecognizer = TapGestureRecognizer()
+    ..onTap = () => _openLegalDocument(LegalDocuments.terms);
+  late final _privacyLinkRecognizer = TapGestureRecognizer()
+    ..onTap = () => _openLegalDocument(LegalDocuments.privacy);
+
+  bool get _isBusy => _isLoading;
+
+  bool get _canSubmit => _ageConfirmed && _termsAccepted && !_isBusy;
+
+  void _openLegalDocument(LegalDocument document) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => LegalDocumentScreen(document: document)),
+    );
+  }
 
   @override
   void dispose() {
+    _termsLinkRecognizer.dispose();
+    _privacyLinkRecognizer.dispose();
     _fullNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -149,6 +166,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _submitRegistration() async {
     FocusScope.of(context).unfocus();
 
+    if (!_canSubmit) return;
+
     setState(() {
       _emailApiError = null;
       _phoneApiError = null;
@@ -171,6 +190,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         phoneNumber: _phoneController.text,
         password: _passwordController.text,
         referralCode: _referralCodeController.text,
+        ageConfirmed: _ageConfirmed,
+        termsAccepted: _termsAccepted,
+        consentVersion: LegalDocuments.consentVersion,
       );
 
       final response = await _authApiService.register(request);
@@ -249,52 +271,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<void> _handleGoogleSignIn() async {
-    if (_isBusy) return;
+  TextSpan _linkSpan(
+    SmColors colors,
+    String text,
+    TapGestureRecognizer recognizer,
+  ) {
+    return TextSpan(
+      text: text,
+      recognizer: recognizer,
+      style: TextStyle(
+        color: colors.primary,
+        fontWeight: FontWeight.w700,
+        decoration: TextDecoration.underline,
+      ),
+    );
+  }
 
-    setState(() {
-      _isGoogleLoading = true;
-    });
-
-    try {
-      final idToken = await _googleAuthService.signInAndGetIdToken();
-      if (idToken == null) {
-        return;
-      }
-
-      final response = await _authApiService.loginWithGoogle(idToken);
-      await _tokenStorageService.saveTokens(
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        accessTokenExpiresAt: response.accessTokenExpiresAt,
-      );
-
-      if (!mounted) return;
-
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        RouteNames.dashboard,
-        (route) => false,
-      );
-    } on GoogleAuthException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString().replaceFirst('Exception: ', '')),
+  Widget _buildConsentCheckbox({
+    required SmColors colors,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required TextSpan label,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Checkbox(
+          value: value,
+          activeColor: colors.primary,
+          onChanged: _isBusy ? null : (v) => onChanged(v ?? false),
         ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGoogleLoading = false;
-        });
-      }
-    }
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text.rich(
+              TextSpan(
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontSize: 13.5,
+                  height: 1.4,
+                ),
+                children: [label],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   InputDecoration _inputDecoration({
@@ -559,6 +582,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   icon: Icons.card_giftcard_outlined,
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              _buildConsentCheckbox(
+                                colors: colors,
+                                value: _ageConfirmed,
+                                onChanged: (value) {
+                                  setState(() => _ageConfirmed = value);
+                                },
+                                label: const TextSpan(
+                                  text: 'I confirm that I am 18 years of age '
+                                      'or older.',
+                                ),
+                              ),
+                              _buildConsentCheckbox(
+                                colors: colors,
+                                value: _termsAccepted,
+                                onChanged: (value) {
+                                  setState(() => _termsAccepted = value);
+                                },
+                                label: TextSpan(
+                                  children: [
+                                    const TextSpan(text: 'I agree to the '),
+                                    _linkSpan(
+                                      colors,
+                                      'Terms of Service',
+                                      _termsLinkRecognizer,
+                                    ),
+                                    const TextSpan(text: ' and have read the '),
+                                    _linkSpan(
+                                      colors,
+                                      'Privacy Policy',
+                                      _privacyLinkRecognizer,
+                                    ),
+                                    const TextSpan(text: '.'),
+                                  ],
+                                ),
+                              ),
                               if (_generalApiError != null) ...[
                                 const SizedBox(height: 14),
                                 Text(
@@ -574,39 +633,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               _SmartMoneyRegisterButton(
                                 colors: colors,
                                 isLoading: _isLoading,
-                                onPressed: _isBusy
-                                    ? null
-                                    : _submitRegistration,
-                              ),
-                              const SizedBox(height: SmSpacing.lg),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Divider(color: colors.border),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: SmSpacing.md,
-                                    ),
-                                    child: Text(
-                                      'or',
-                                      style: TextStyle(
-                                        color: colors.textMuted,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Divider(color: colors.border),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: SmSpacing.lg),
-                              GoogleSignInButton(
-                                isLoading: _isGoogleLoading,
-                                onPressed: _isBusy
-                                    ? null
-                                    : _handleGoogleSignIn,
+                                onPressed: _canSubmit
+                                    ? _submitRegistration
+                                    : null,
                               ),
                               const SizedBox(height: SmSpacing.lg),
                               Row(

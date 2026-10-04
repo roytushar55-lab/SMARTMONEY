@@ -1,3 +1,4 @@
+using SmartMoney.Domain.Enums;
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Application.Contracts.Identity.AdminUsers;
@@ -30,9 +31,9 @@ public sealed class ListUsersQueryHandler
             : Math.Min(query.PageSize, MaxPageSize);
 
         var users = await _userRepository.ListAsync(
-            page, pageSize, query.Search, query.IsActive, cancellationToken);
+            page, pageSize, query.Search, query.IsActive, query.IsDeleted, cancellationToken);
         var totalCount = await _userRepository.CountAsync(
-            query.Search, query.IsActive, cancellationToken);
+            query.Search, query.IsActive, query.IsDeleted, cancellationToken);
 
         var items = users
             .Select(user => new AdminUserListItemResponse
@@ -42,7 +43,8 @@ public sealed class ListUsersQueryHandler
                 Email = user.Email,
                 CreatedAt = user.CreatedAt,
                 Role = user.Role?.Name.ToString() ?? "Unknown",
-                IsActive = user.IsActive
+                IsActive = user.IsActive,
+                IsDeleted = user.Status == UserStatus.Deleted
             })
             .ToList();
 

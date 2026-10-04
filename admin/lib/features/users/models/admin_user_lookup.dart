@@ -7,6 +7,7 @@ class AdminUserListItem {
     required this.createdAt,
     required this.role,
     required this.isActive,
+    required this.isDeleted,
   });
 
   final String userId;
@@ -15,6 +16,7 @@ class AdminUserListItem {
   final DateTime createdAt;
   final String role;
   final bool isActive;
+  final bool isDeleted;
 
   factory AdminUserListItem.fromJson(Map<String, dynamic> json) {
     return AdminUserListItem(
@@ -24,6 +26,7 @@ class AdminUserListItem {
       createdAt: DateTime.tryParse('${json['createdAt']}') ?? DateTime.now(),
       role: json['role'] as String? ?? '',
       isActive: json['isActive'] as bool? ?? false,
+      isDeleted: json['isDeleted'] as bool? ?? false,
     );
   }
 }
@@ -128,8 +131,10 @@ class AdminUserDetail {
     required this.createdAt,
     required this.role,
     required this.isActive,
+    required this.isDeleted,
     required this.cashbackSummary,
     required this.lifetimeWithdrawn,
+    this.archivedDetails,
   });
 
   final String userId;
@@ -138,8 +143,14 @@ class AdminUserDetail {
   final DateTime createdAt;
   final String role;
   final bool isActive;
+  final bool isDeleted;
   final CashbackSummary cashbackSummary;
   final double lifetimeWithdrawn;
+
+  /// Original details of a self-deleted user, kept in a restricted archive
+  /// until [ArchivedUserDetails.purgeAfter]. Null for live users and once
+  /// the retention period has passed.
+  final ArchivedUserDetails? archivedDetails;
 
   factory AdminUserDetail.fromJson(Map<String, dynamic> json) {
     return AdminUserDetail(
@@ -149,10 +160,16 @@ class AdminUserDetail {
       createdAt: DateTime.tryParse('${json['createdAt']}') ?? DateTime.now(),
       role: json['role'] as String? ?? '',
       isActive: json['isActive'] as bool? ?? false,
+      isDeleted: json['isDeleted'] as bool? ?? false,
       cashbackSummary: CashbackSummary.fromJson(
         json['cashbackSummary'] as Map<String, dynamic>?,
       ),
       lifetimeWithdrawn: CashbackStat._asDouble(json['lifetimeWithdrawn']),
+      archivedDetails: json['archivedDetails'] is Map<String, dynamic>
+          ? ArchivedUserDetails.fromJson(
+              json['archivedDetails'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 
@@ -164,8 +181,37 @@ class AdminUserDetail {
       createdAt: createdAt,
       role: role ?? this.role,
       isActive: isActive ?? this.isActive,
+      isDeleted: isDeleted,
       cashbackSummary: cashbackSummary,
       lifetimeWithdrawn: lifetimeWithdrawn,
+      archivedDetails: archivedDetails,
+    );
+  }
+}
+
+/// Mirrors the backend's `AdminUserArchivedDetailsResponse`.
+class ArchivedUserDetails {
+  const ArchivedUserDetails({
+    required this.fullName,
+    required this.email,
+    required this.mobileNumber,
+    required this.deletedAt,
+    required this.purgeAfter,
+  });
+
+  final String fullName;
+  final String email;
+  final String mobileNumber;
+  final DateTime deletedAt;
+  final DateTime purgeAfter;
+
+  factory ArchivedUserDetails.fromJson(Map<String, dynamic> json) {
+    return ArchivedUserDetails(
+      fullName: json['fullName'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      mobileNumber: json['mobileNumber'] as String? ?? '',
+      deletedAt: DateTime.tryParse('${json['deletedAt']}') ?? DateTime.now(),
+      purgeAfter: DateTime.tryParse('${json['purgeAfter']}') ?? DateTime.now(),
     );
   }
 }

@@ -81,6 +81,19 @@ public sealed class CashbackRepository : ICashbackRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Cashback>> ListUnconfirmedByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Cashbacks
+            .Where(cashback =>
+                cashback.UserId == userId
+                && cashback.ConfirmedDate == null
+                && (cashback.Status == CashbackStatus.Pending
+                    || cashback.Status == CashbackStatus.AwaitingAdminReview))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<int> CountByUserIdAsync(
         Guid userId,
         CancellationToken cancellationToken = default)

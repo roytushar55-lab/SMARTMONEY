@@ -50,10 +50,11 @@ public sealed class AdminUsersController : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null,
         [FromQuery] bool? isActive = null,
+        [FromQuery] bool? isDeleted = null,
         CancellationToken cancellationToken = default)
     {
         var response = await _listHandler.HandleAsync(
-            new ListUsersQuery(page, pageSize, search, isActive), cancellationToken);
+            new ListUsersQuery(page, pageSize, search, isActive, isDeleted), cancellationToken);
 
         return Ok(response);
     }

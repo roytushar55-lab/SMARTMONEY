@@ -5,6 +5,9 @@ class RegisterRequest {
     required this.phoneNumber,
     required this.password,
     this.referralCode,
+    required this.ageConfirmed,
+    required this.termsAccepted,
+    required this.consentVersion,
   });
 
   final String fullName;
@@ -12,6 +15,9 @@ class RegisterRequest {
   final String phoneNumber;
   final String password;
   final String? referralCode;
+  final bool ageConfirmed;
+  final bool termsAccepted;
+  final String consentVersion;
 
   Map<String, dynamic> toJson() {
     return {
@@ -22,6 +28,9 @@ class RegisterRequest {
       'referralCode': referralCode?.trim().isEmpty == true
           ? null
           : referralCode?.trim(),
+      'ageConfirmed': ageConfirmed,
+      'termsAccepted': termsAccepted,
+      'consentVersion': consentVersion,
     };
   }
 }

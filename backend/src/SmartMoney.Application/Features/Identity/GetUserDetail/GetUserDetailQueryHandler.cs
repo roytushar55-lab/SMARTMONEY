@@ -16,15 +16,18 @@ public sealed class GetUserDetailQueryHandler
     private readonly IUserRepository _userRepository;
     private readonly ICashbackRepository _cashbackRepository;
     private readonly IWalletRepository _walletRepository;
+    private readonly IDeletedUserArchiveRepository _archiveRepository;
 
     public GetUserDetailQueryHandler(
         IUserRepository userRepository,
         ICashbackRepository cashbackRepository,
-        IWalletRepository walletRepository)
+        IWalletRepository walletRepository,
+        IDeletedUserArchiveRepository archiveRepository)
     {
         _userRepository = userRepository;
         _cashbackRepository = cashbackRepository;
         _walletRepository = walletRepository;
+        _archiveRepository = archiveRepository;
     }
 
     public async Task<AdminUserDetailResponse?> HandleAsync(
@@ -43,6 +46,10 @@ public sealed class GetUserDetailQueryHandler
 
         var wallet = await _walletRepository.GetByUserIdAsync(user.Id, cancellationToken);
 
+        var archive = user.Status == UserStatus.Deleted
+            ? await _archiveRepository.GetByUserIdAsync(user.Id, cancellationToken)
+            : null;
+
         return new AdminUserDetailResponse
         {
             UserId = user.Id,
@@ -51,6 +58,7 @@ public sealed class GetUserDetailQueryHandler
             CreatedAt = user.CreatedAt,
             Role = user.Role?.Name.ToString() ?? "Unknown",
             IsActive = user.IsActive,
+            IsDeleted = user.Status == UserStatus.Deleted,
             CashbackSummary = new AdminUserCashbackSummaryResponse
             {
                 Pending = ToSummary(summary, CashbackStatus.Pending),
@@ -58,7 +66,17 @@ public sealed class GetUserDetailQueryHandler
                 Rejected = ToSummary(summary, CashbackStatus.Rejected),
                 Reversed = ToSummary(summary, CashbackStatus.Reversed)
             },
-            LifetimeWithdrawn = wallet?.TotalWithdrawn ?? 0
+            LifetimeWithdrawn = wallet?.TotalWithdrawn ?? 0,
+            ArchivedDetails = archive is null
+                ? null
+                : new AdminUserArchivedDetailsResponse
+                {
+                    FullName = archive.FullName,
+                    Email = archive.Email,
+                    MobileNumber = archive.MobileNumber,
+                    DeletedAt = archive.DeletedAt,
+                    PurgeAfter = archive.PurgeAfter
+                }
         };
     }
 

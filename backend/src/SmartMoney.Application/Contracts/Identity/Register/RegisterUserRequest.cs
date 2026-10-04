@@ -23,4 +23,14 @@ public sealed class RegisterUserRequest
 
     [StringLength(50)]
     public string? ReferralCode { get; init; }
+
+    /// <summary>User confirmed they are 18 or over.</summary>
+    public bool AgeConfirmed { get; init; }
+
+    /// <summary>User accepted the Terms of Service and Privacy Policy.</summary>
+    public bool TermsAccepted { get; init; }
+
+    /// <summary>Version of the Terms/Privacy text shown to the user.</summary>
+    [StringLength(50)]
+    public string? ConsentVersion { get; init; }
 }

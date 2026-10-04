@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Domain.Entities;
+using SmartMoney.Domain.Enums;
 using SmartMoney.Infrastructure.Persistence.Context;
 
 namespace SmartMoney.Infrastructure.Persistence.Repositories;
@@ -49,17 +50,6 @@ public sealed class UserRepository : IUserRepository
                 cancellationToken);
     }
 
-    public Task<User?> GetByGoogleIdAsync(
-        string googleId,
-        CancellationToken cancellationToken = default)
-    {
-        return _context.Users
-            .Include(user => user.Role)
-            .SingleOrDefaultAsync(
-                user => user.GoogleId == googleId,
-                cancellationToken);
-    }
-
     public Task<User?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default)
@@ -83,12 +73,14 @@ public sealed class UserRepository : IUserRepository
         int pageSize,
         string? search = null,
         bool? isActive = null,
+        bool? isDeleted = null,
         CancellationToken cancellationToken = default)
     {
         var query = ApplyFilters(
             _context.Users.AsNoTracking().Include(user => user.Role),
             search,
-            isActive);
+            isActive,
+            isDeleted);
 
         return await query
             .OrderByDescending(user => user.CreatedAt)
@@ -100,9 +92,11 @@ public sealed class UserRepository : IUserRepository
     public Task<int> CountAsync(
         string? search = null,
         bool? isActive = null,
+        bool? isDeleted = null,
         CancellationToken cancellationToken = default)
     {
-        return ApplyFilters(_context.Users, search, isActive).CountAsync(cancellationToken);
+        return ApplyFilters(_context.Users, search, isActive, isDeleted)
+            .CountAsync(cancellationToken);
     }
 
     /// <summary>
@@ -115,11 +109,23 @@ public sealed class UserRepository : IUserRepository
     private static IQueryable<User> ApplyFilters(
         IQueryable<User> query,
         string? search,
-        bool? isActive)
+        bool? isActive,
+        bool? isDeleted)
     {
-        if (isActive is not null)
+        if (isDeleted == true)
         {
-            query = query.Where(user => user.IsActive == isActive);
+            // The "Deleted" filter wins over the active/inactive toggle: a
+            // deleted account is neither.
+            query = query.Where(user => user.Status == UserStatus.Deleted);
+        }
+        else if (isActive is not null)
+        {
+            // "Inactive" means deactivated by an admin; self-deleted
+            // accounts have their own "Deleted" status and are excluded.
+            query = isActive == true
+                ? query.Where(user => user.IsActive)
+                : query.Where(user =>
+                    !user.IsActive && user.Status != UserStatus.Deleted);
         }
 
         return ApplySearch(query, search);
@@ -127,7 +133,7 @@ public sealed class UserRepository : IUserRepository
 
     /// <summary>
     /// Matches full name or email substrings, plus a status word
-    /// ("active"/"inactive"/"disabled") once the term is long enough to be
+    /// ("active"/"inactive"/"deleted") once the term is long enough to be
     /// unambiguous — short terms like "a" stay name/email-only.
     /// </summary>
     private static IQueryable<User> ApplySearch(IQueryable<User> query, string? search)
@@ -136,32 +142,53 @@ public sealed class UserRepository : IUserRepository
 
         string term = search.Trim();
 
-        bool? statusFilter = null;
+        bool matchActive = false;
+        bool matchInactive = false;
+        bool matchDeleted = false;
         if (term.Length >= 3)
         {
             string lower = term.ToLowerInvariant();
-            if ("inactive".Contains(lower) || "disabled".Contains(lower) || "deactivated".Contains(lower))
+            if ("active".StartsWith(lower))
             {
-                statusFilter = false;
+                matchActive = true;
             }
-            else if ("active".StartsWith(lower))
+            else if ("inactive".Contains(lower) || "disabled".Contains(lower) || "deactivated".Contains(lower))
             {
-                statusFilter = true;
+                matchInactive = true;
+            }
+            else if ("deleted".StartsWith(lower))
+            {
+                matchDeleted = true;
             }
         }
 
         return query.Where(user =>
             EF.Functions.ILike(user.FullName, $"%{term}%") ||
             EF.Functions.ILike(user.Email, $"%{term}%") ||
-            (statusFilter != null && user.IsActive == statusFilter));
+            (matchActive && user.IsActive) ||
+            (matchInactive && !user.IsActive && user.Status != UserStatus.Deleted) ||
+            (matchDeleted && user.Status == UserStatus.Deleted));
     }
 
+    /// <summary>
+    /// Active users, or users an admin deactivated. Self-deleted accounts
+    /// are counted separately by <see cref="CountDeletedAsync"/>.
+    /// </summary>
     public Task<int> CountByActiveStatusAsync(
         bool isActive,
         CancellationToken cancellationToken = default)
     {
         return _context.Users.CountAsync(
-            user => user.IsActive == isActive, cancellationToken);
+            user => user.IsActive == isActive
+                && user.Status != UserStatus.Deleted,
+            cancellationToken);
+    }
+
+    public Task<int> CountDeletedAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Users.CountAsync(
+            user => user.Status == UserStatus.Deleted, cancellationToken);
     }
 
     public Task<int> CountCreatedSinceAsync(

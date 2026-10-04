@@ -16,10 +16,6 @@ public interface IUserRepository
         string email,
         CancellationToken cancellationToken = default);
 
-    Task<User?> GetByGoogleIdAsync(
-        string googleId,
-        CancellationToken cancellationToken = default);
-
     Task<User?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);
@@ -40,15 +36,20 @@ public interface IUserRepository
         int pageSize,
         string? search = null,
         bool? isActive = null,
+        bool? isDeleted = null,
         CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(
         string? search = null,
         bool? isActive = null,
+        bool? isDeleted = null,
         CancellationToken cancellationToken = default);
 
     Task<int> CountByActiveStatusAsync(
         bool isActive,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountDeletedAsync(
         CancellationToken cancellationToken = default);
 
     Task<int> CountCreatedSinceAsync(

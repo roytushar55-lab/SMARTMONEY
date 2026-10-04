@@ -8,6 +8,9 @@ public sealed class AdminUserStatsResponse
 
     public int DeactivatedUsers { get; set; }
 
+    /// <summary>Accounts the user deleted themselves (anonymized).</summary>
+    public int DeletedUsers { get; set; }
+
     /// <summary>Users created in the trailing 7 days, as of now.</summary>
     public int NewThisWeek { get; set; }
 }

@@ -8,6 +8,7 @@ using SmartMoney.Application.Contracts.Cashbacks;
 using SmartMoney.Application.Contracts.CashbackSettings;
 using SmartMoney.Application.Contracts.Identity.AdminUsers;
 using SmartMoney.Application.Contracts.Identity.ChangeUserRole;
+using SmartMoney.Application.Contracts.Identity.DeleteAccount;
 using SmartMoney.Application.Contracts.Identity.ForgotPassword;
 using SmartMoney.Application.Contracts.Identity.Login;
 using SmartMoney.Application.Contracts.Identity.RefreshToken;
@@ -45,11 +46,11 @@ using SmartMoney.Application.Features.Categories.GetCategories;
 using SmartMoney.Application.Features.Categories.ListCategoriesAdmin;
 using SmartMoney.Application.Features.Categories.UpdateCategory;
 using SmartMoney.Application.Features.Identity.ChangeUserRole;
+using SmartMoney.Application.Features.Identity.DeleteAccount;
 using SmartMoney.Application.Features.Identity.GetUserByEmail;
 using SmartMoney.Application.Features.Identity.GetUserDetail;
 using SmartMoney.Application.Features.Identity.GetUserStats;
 using SmartMoney.Application.Features.Identity.ForgotPassword;
-using SmartMoney.Application.Features.Identity.GoogleLogin;
 using SmartMoney.Application.Features.Identity.ListUsers;
 using SmartMoney.Application.Features.Identity.Login;
 using SmartMoney.Application.Features.Identity.RefreshToken;
@@ -112,10 +113,6 @@ public static class ApplicationDependencyInjection
 
         services.AddScoped<ICommandHandler<ResetPasswordCommand, ResetPasswordResponse>,ResetPasswordCommandHandler>();
 
-        services.AddScoped<LoginWithGoogleValidator>();
-
-        services.AddScoped<ICommandHandler<LoginWithGoogleCommand, LoginUserResponse>,LoginWithGoogleCommandHandler>();
-
         services.AddScoped<IQueryHandler<GetCategoriesQuery,IReadOnlyList<CategoryListItemResponse>>,GetCategoriesQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetStoresQuery,IReadOnlyList<StoreListItemResponse>>,GetStoresQueryHandler>();
@@ -153,6 +150,8 @@ public static class ApplicationDependencyInjection
         services.AddScoped<ChangeUserRoleValidator>();
 
         services.AddScoped<ICommandHandler<ChangeUserRoleCommand,ChangeUserRoleResponse?>,ChangeUserRoleCommandHandler>();
+
+        services.AddScoped<ICommandHandler<DeleteAccountCommand,DeleteAccountResult>,DeleteAccountCommandHandler>();
 
         services.AddScoped<IQueryHandler<GetUserByEmailQuery,AdminUserLookupResponse?>,GetUserByEmailQueryHandler>();
 

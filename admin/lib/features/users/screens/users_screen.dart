@@ -43,6 +43,10 @@ class _UsersScreenState extends State<UsersScreen> {
   /// a status narrows whatever the search box already matches.
   bool? _statusFilter;
 
+  /// "Deleted" chip: accounts users deleted themselves. Mutually exclusive
+  /// with [_statusFilter] — a deleted account is neither active nor inactive.
+  bool _deletedFilter = false;
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +69,7 @@ class _UsersScreenState extends State<UsersScreen> {
         page: _pageNumber,
         search: _search.isEmpty ? null : _search,
         isActive: _statusFilter,
+        isDeleted: _deletedFilter ? true : null,
       );
       setState(() {
         _page = page;
@@ -113,6 +118,16 @@ class _UsersScreenState extends State<UsersScreen> {
   void _toggleStatusFilter(bool value) {
     setState(() {
       _statusFilter = _statusFilter == value ? null : value;
+      _deletedFilter = false;
+      _pageNumber = 1;
+    });
+    _load();
+  }
+
+  void _toggleDeletedFilter() {
+    setState(() {
+      _deletedFilter = !_deletedFilter;
+      if (_deletedFilter) _statusFilter = null;
       _pageNumber = 1;
     });
     _load();
@@ -142,6 +157,14 @@ class _UsersScreenState extends State<UsersScreen> {
             onChanged: _onSearchChanged,
             onClear: _clearSearch,
             statusFilter: _statusFilter,
+            extraChips: [
+              AdminFilterChip(
+                selected: _deletedFilter,
+                label: 'Deleted',
+                activeColor: AdminColors.textSecondary,
+                onTap: _toggleDeletedFilter,
+              ),
+            ],
             onStatusToggle: _toggleStatusFilter,
           ),
           const SizedBox(height: AdminSpacing.md),
@@ -169,7 +192,7 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   String _emptyMessage() {
-    final statusWord = switch (_statusFilter) {
+    final statusWord = _deletedFilter ? 'deleted ' : switch (_statusFilter) {
       true => 'active ',
       false => 'inactive ',
       null => '',
@@ -209,7 +232,9 @@ class _UsersScreenState extends State<UsersScreen> {
                 Text(_formatDate(user.createdAt)),
                 FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: StatusBadge.active(user.isActive),
+                  child: user.isDeleted
+                      ? StatusBadge.deleted()
+                      : StatusBadge.active(user.isActive),
                 ),
               ];
             },

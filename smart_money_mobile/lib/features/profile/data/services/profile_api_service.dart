@@ -82,21 +82,69 @@ class ProfileApiService {
     return ProfileResponse.fromJson(decodedBody);
   }
 
-  Future<void> changePassword(String newPassword) async {
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
     final response = await _sendAuthorizedRequest(
       (headers) => _client.put(
         Uri.parse('$baseUrl/api/profile/change-password'),
         headers: headers,
-        body: jsonEncode({'newPassword': newPassword}),
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
       ),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
-        'Password update failed. Please try again.',
+        _errorMessage(
+          response,
+          'Password update failed. Please try again.',
+        ),
         statusCode: response.statusCode,
       );
     }
+  }
+
+  /// Permanently deletes the signed-in account after re-checking the
+  /// password. The backend answers 400 for a wrong password and 409 while
+  /// the wallet still holds withdrawable money; both carry a user-safe
+  /// `message`, which is surfaced as the [ApiException] message.
+  Future<void> deleteAccount(String password) async {
+    final response = await _sendAuthorizedRequest(
+      (headers) => _client.post(
+        Uri.parse('$baseUrl/api/profile/delete-account'),
+        headers: headers,
+        body: jsonEncode({'password': password}),
+      ),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        _errorMessage(
+          response,
+          'Unable to delete your account. Please try again.',
+        ),
+        statusCode: response.statusCode,
+      );
+    }
+  }
+
+  String _errorMessage(http.Response response, String fallback) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message;
+        }
+      }
+    } catch (_) {
+      // Fall through to the generic message.
+    }
+    return fallback;
   }
 
   Future<ProfileResponse> uploadProfilePhoto({

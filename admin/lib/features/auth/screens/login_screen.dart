@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/auth/admin_session.dart';
 import '../../../core/theme/admin_colors.dart';
-import '../../../core/widgets/google_sign_in_button.dart';
 import '../widgets/login_brand_panel.dart';
 import 'forgot_password_dialog.dart';
 
@@ -57,12 +56,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _notify(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,9 +85,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     setState(() => _rememberMe = value ?? true),
                 onSubmit: _submit,
                 onForgotPassword: () => showForgotPasswordDialog(context),
-                onGoogleSignIn: () => _notify(
-                  "Google sign-in isn't available for the admin panel yet.",
-                ),
               );
 
               if (!isSplit) {
@@ -154,7 +144,6 @@ class _LoginForm extends StatelessWidget {
     required this.onRememberMeChanged,
     required this.onSubmit,
     required this.onForgotPassword,
-    required this.onGoogleSignIn,
   });
 
   final GlobalKey<FormState> formKey;
@@ -169,7 +158,6 @@ class _LoginForm extends StatelessWidget {
   final ValueChanged<bool?> onRememberMeChanged;
   final VoidCallback onSubmit;
   final VoidCallback onForgotPassword;
-  final VoidCallback onGoogleSignIn;
 
   InputDecoration _decoration({
     required String hint,
@@ -377,27 +365,6 @@ class _LoginForm extends StatelessWidget {
                     ),
             ),
           ),
-          const SizedBox(height: AdminSpacing.xl),
-          Row(
-            children: [
-              const Expanded(child: Divider()),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AdminSpacing.md,
-                ),
-                child: Text(
-                  'or',
-                  style: TextStyle(
-                    color: AdminColors.textMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const Expanded(child: Divider()),
-            ],
-          ),
-          const SizedBox(height: AdminSpacing.xl),
-          GoogleSignInButton(onPressed: submitting ? null : onGoogleSignIn),
           if (showBrandLockup) ...[
             const SizedBox(height: AdminSpacing.xxxl),
             const Center(child: LoginTrustBadges()),

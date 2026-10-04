@@ -107,6 +107,10 @@ public sealed class RegisterUserCommandHandler
             passwordHash,
             customerRole.Id);
 
+        user.RecordConsent(
+            command.ConsentVersion!,
+            command.ConsentIpAddress);
+
         var wallet = new Wallet(user.Id);
 
         string otp = _otpGenerator.Generate(6);

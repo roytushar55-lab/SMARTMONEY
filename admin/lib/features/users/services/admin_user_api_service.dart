@@ -15,6 +15,7 @@ class AdminUserApiService {
     int pageSize = 20,
     String? search,
     bool? isActive,
+    bool? isDeleted,
   }) async {
     final query = StringBuffer('/api/admin/users?page=$page&pageSize=$pageSize');
     if (search != null && search.trim().isNotEmpty) {
@@ -22,6 +23,9 @@ class AdminUserApiService {
     }
     if (isActive != null) {
       query.write('&isActive=$isActive');
+    }
+    if (isDeleted != null) {
+      query.write('&isDeleted=$isDeleted');
     }
     final json = await _client.getJson(query.toString());
     return AdminUserPage.fromJson(json as Map<String, dynamic>);

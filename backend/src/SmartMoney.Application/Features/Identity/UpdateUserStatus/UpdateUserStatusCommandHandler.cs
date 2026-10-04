@@ -1,6 +1,7 @@
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Application.Contracts.Identity.AdminUsers;
+using SmartMoney.Domain.Enums;
 
 namespace SmartMoney.Application.Features.Identity.UpdateUserStatus;
 
@@ -38,6 +39,12 @@ public sealed class UpdateUserStatusCommandHandler
         if (user is null)
         {
             return null;
+        }
+
+        if (user.Status == UserStatus.Deleted)
+        {
+            throw new InvalidOperationException(
+                "This account was deleted by the user and cannot be activated or deactivated.");
         }
 
         if (command.IsActive)

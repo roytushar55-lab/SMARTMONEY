@@ -10,7 +10,10 @@ import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../../auth/data/services/token_storage_service.dart';
 import '../../data/models/profile_response.dart';
 import '../../data/services/profile_api_service.dart';
+import '../../../legal/data/legal_documents.dart';
+import '../../../legal/presentation/screens/legal_document_screen.dart';
 import '../../../shell/presentation/screens/main_shell.dart';
+import 'delete_account_screen.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -22,15 +25,10 @@ class ProfileSetupScreen extends StatefulWidget {
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _profileApiService = ProfileApiService();
   final _tokenStorageService = const TokenStorageService();
-  final _nameController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _imagePicker = ImagePicker();
 
   ProfileResponse? _profile;
   bool _isLoading = true;
-  bool _isSavingName = false;
-  bool _isChangingPassword = false;
-  bool _isPasswordHidden = true;
   bool _isUploadingProfilePhoto = false;
 
   @override
@@ -41,8 +39,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _passwordController.dispose();
     _profileApiService.dispose();
     super.dispose();
   }
@@ -59,7 +55,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
       setState(() {
         _profile = profile;
-        _nameController.text = profile.fullName;
         _isLoading = false;
       });
     } on ApiException catch (e) {
@@ -88,86 +83,141 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
-  Future<void> _updateName() async {
-    final name = _nameController.text.trim();
+  Future<bool?> _showTextEntrySheet({
+    required String title,
+    required String hintText,
+    required IconData icon,
+    required String submitLabel,
+    required Future<String?> Function(String value, String? extra) onSubmit,
+    String initialValue = '',
+    String? extraHintText,
+    bool obscure = false,
+    TextCapitalization capitalization = TextCapitalization.none,
+  }) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _TextEntrySheet(
+        title: title,
+        hintText: hintText,
+        icon: icon,
+        submitLabel: submitLabel,
+        initialValue: initialValue,
+        extraHintText: extraHintText,
+        obscure: obscure,
+        capitalization: capitalization,
+        onSubmit: onSubmit,
+      ),
+    );
+  }
 
-    if (name.isEmpty) {
+  Future<void> _editName() async {
+    final saved = await _showTextEntrySheet(
+      title: 'Edit name',
+      hintText: 'Full name',
+      icon: Icons.badge_outlined,
+      submitLabel: 'Save',
+      initialValue: _profile?.fullName ?? '',
+      capitalization: TextCapitalization.words,
+      onSubmit: (value, _) async {
+        final name = value.trim();
+
+        if (name.isEmpty) {
+          return 'Name is required';
+        }
+
+        try {
+          final profile = await _profileApiService.updateName(name);
+          if (mounted) {
+            setState(() {
+              _profile = profile;
+            });
+          }
+          return null;
+        } catch (_) {
+          return 'Unable to update name';
+        }
+      },
+    );
+
+    if (saved == true && mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Name is required')));
-      return;
-    }
-
-    setState(() {
-      _isSavingName = true;
-    });
-
-    try {
-      final profile = await _profileApiService.updateName(name);
-
-      if (!mounted) return;
-
-      setState(() {
-        _profile = profile;
-        _nameController.text = profile.fullName;
-        _isSavingName = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name updated successfully')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        _isSavingName = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Unable to update name')));
+      ).showSnackBar(const SnackBar(content: Text('Name updated')));
     }
   }
 
   Future<void> _changePassword() async {
-    final password = _passwordController.text;
+    final saved = await _showTextEntrySheet(
+      title: 'Change password',
+      hintText: 'New password',
+      extraHintText: 'Current password',
+      icon: Icons.lock_outline,
+      submitLabel: 'Update password',
+      obscure: true,
+      onSubmit: (value, current) async {
+        if (current == null || current.isEmpty) {
+          return 'Enter your current password';
+        }
 
-    if (password.trim().isEmpty) {
+        final problem = _passwordProblem(value);
+
+        if (problem != null) {
+          return problem;
+        }
+
+        try {
+          await _profileApiService.changePassword(
+            currentPassword: current,
+            newPassword: value,
+          );
+          return null;
+        } on ApiException catch (e) {
+          return e.message;
+        } catch (_) {
+          return 'Unable to update password';
+        }
+      },
+    );
+
+    if (saved == true && mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Password is required')));
-      return;
+      ).showSnackBar(const SnackBar(content: Text('Password updated')));
     }
+  }
 
-    setState(() {
-      _isChangingPassword = true;
-    });
-
-    try {
-      await _profileApiService.changePassword(password);
-
-      if (!mounted) return;
-
-      _passwordController.clear();
-
-      setState(() {
-        _isChangingPassword = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated successfully')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        _isChangingPassword = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to update password')),
-      );
+  /// Same rules the signup screen enforces.
+  String? _passwordProblem(String password) {
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
     }
+    if (!RegExp(r'[A-Z]').hasMatch(password)) {
+      return 'Password must contain an uppercase letter';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(password)) {
+      return 'Password must contain a lowercase letter';
+    }
+    if (!RegExp(r'[0-9]').hasMatch(password)) {
+      return 'Password must contain a number';
+    }
+    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) {
+      return 'Password must contain a special character';
+    }
+    return null;
+  }
+
+  void _openLegalDocument(LegalDocument document) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => LegalDocumentScreen(document: document)),
+    );
+  }
+
+  void _openDeleteAccount() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const DeleteAccountScreen()));
   }
 
   Future<void> _pickProfilePhoto() async {
@@ -303,19 +353,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return '${_profileApiService.baseUrl}$imageUrl';
   }
 
-  InputDecoration _inputDecoration({
-    required BuildContext context,
-    required String hintText,
-    required IconData icon,
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      hintText: hintText,
-      prefixIcon: Icon(icon, color: SmColors.of(context).primary),
-      suffixIcon: suffixIcon,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final profile = _profile;
@@ -340,15 +377,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           const SizedBox(height: 14),
                           _buildHeader(profile),
                           const SizedBox(height: 16),
-                          _buildAccountCard(profile),
-                          const SizedBox(height: 16),
-                          _buildSecurityCard(),
-                          const SizedBox(height: 16),
-                          _buildAppearanceCard(),
-                          const SizedBox(height: 16),
-                          _buildSupportCard(),
-                          const SizedBox(height: 16),
-                          _buildLogoutCard(),
+                          _buildAccountSection(profile),
+                          const SizedBox(height: 20),
+                          _buildPreferencesSection(),
+                          const SizedBox(height: 20),
+                          _buildSupportSection(),
+                          const SizedBox(height: 24),
+                          _buildSessionActions(),
                         ],
                       ),
                     ),
@@ -490,291 +525,127 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
-  Widget _buildAccountCard(ProfileResponse? profile) {
-    return LoginDemoGlassCard(
-      borderRadius: 22,
-      // Blur disabled: these cards live inside the scroll view.
-      enableBlur: false,
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _SectionTitle(
-            title: 'Account Information',
-            subtitle: 'Your registered SmartMoney details',
-          ),
-          const SizedBox(height: 18),
-          _InfoRow(
-            label: 'Full Name',
-            value: profile?.fullName ?? '',
-            icon: Icons.person_outline,
-          ),
-          const _InfoDivider(),
-          _InfoRow(
-            label: 'Email Address',
-            value: profile?.email ?? '',
-            icon: Icons.email_outlined,
-          ),
-          const _InfoDivider(),
-          _InfoRow(
-            label: 'Phone Number',
-            value: profile?.phoneNumber ?? '',
-            icon: Icons.phone_outlined,
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            textCapitalization: TextCapitalization.words,
-            decoration: _inputDecoration(
-              context: context,
-              hintText: 'Name',
-              icon: Icons.badge_outlined,
+  Widget _buildAccountSection(ProfileResponse? profile) {
+    return _Section(
+      label: 'Account',
+      children: [
+        _SettingsRow(
+          icon: Icons.person_outline,
+          title: profile?.fullName ?? '',
+          subtitle: 'Full name',
+          trailing: Text(
+            'Edit',
+            style: TextStyle(
+              color: SmColors.of(context).primary,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 14),
-          LoginDemoGradientButton(
-            label: 'Update Name',
-            icon: Icons.save_outlined,
-            isLoading: _isSavingName,
-            height: 48,
-            onPressed: _isSavingName ? null : _updateName,
-          ),
-        ],
-      ),
+          onTap: _editName,
+        ),
+        _SettingsRow(
+          icon: Icons.email_outlined,
+          title: profile?.email ?? '',
+          subtitle: 'Email address',
+        ),
+        _SettingsRow(
+          icon: Icons.phone_outlined,
+          title: profile?.phoneNumber ?? '',
+          subtitle: 'Phone number',
+        ),
+      ],
     );
   }
 
-  Widget _buildSecurityCard() {
-    return Builder(
-      builder: (context) {
-        final colors = SmColors.of(context);
-        return LoginDemoGlassCard(
-          borderRadius: 22,
-          // Blur disabled: these cards live inside the scroll view.
-          enableBlur: false,
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _SectionTitle(
-                title: 'Security',
-                subtitle: 'Manage access to your SmartMoney account',
+  Widget _buildPreferencesSection() {
+    return _Section(
+      label: 'Preferences and security',
+      children: [
+        _SettingsRow(
+          icon: Icons.lock_outline,
+          title: 'Change password',
+          onTap: _changePassword,
+        ),
+        ListenableBuilder(
+          listenable: ThemeController.instance,
+          builder: (context, _) {
+            final colors = SmColors.of(context);
+            final isDark = ThemeController.instance.mode == AppThemeMode.dark;
+
+            return _SettingsRow(
+              icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              title: 'Dark mode',
+              subtitle: isDark ? 'On' : 'Off',
+              trailing: Switch(
+                value: isDark,
+                activeTrackColor: colors.primary,
+                onChanged: (value) {
+                  ThemeController.instance.setMode(
+                    value ? AppThemeMode.dark : AppThemeMode.light,
+                  );
+                },
               ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: _passwordController,
-                obscureText: _isPasswordHidden,
-                decoration: _inputDecoration(
-                  context: context,
-                  hintText: 'New Password',
-                  icon: Icons.lock_outline,
-                  suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordHidden = !_isPasswordHidden;
-                      });
-                    },
-                    icon: Icon(
-                      _isPasswordHidden
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: colors.textMuted,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              LoginDemoGradientButton(
-                label: 'Update Password',
-                icon: Icons.lock_reset_rounded,
-                isLoading: _isChangingPassword,
-                height: 48,
-                onPressed: _isChangingPassword ? null : _changePassword,
-              ),
-            ],
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ],
     );
   }
 
-  Widget _buildAppearanceCard() {
-    return LoginDemoGlassCard(
-      borderRadius: 22,
-      // Blur disabled: these cards live inside the scroll view.
-      enableBlur: false,
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _SectionTitle(
-            title: 'Appearance',
-            subtitle: 'Choose how SmartMoney looks on this device',
-          ),
-          const SizedBox(height: 18),
-          ListenableBuilder(
-            listenable: ThemeController.instance,
-            builder: (context, _) {
-              final colors = SmColors.of(context);
-              final isDark =
-                  ThemeController.instance.mode == AppThemeMode.dark;
-
-              return Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: colors.primary.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isDark
-                          ? Icons.dark_mode_rounded
-                          : Icons.light_mode_rounded,
-                      color: colors.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Dark Mode',
-                          style: TextStyle(
-                            color: colors.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isDark ? 'On' : 'Off',
-                          style: TextStyle(
-                            color: colors.textMuted,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: isDark,
-                    activeTrackColor: colors.primary,
-                    onChanged: (value) {
-                      ThemeController.instance.setMode(
-                        value ? AppThemeMode.dark : AppThemeMode.light,
-                      );
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
+  Widget _buildSupportSection() {
+    return _Section(
+      label: 'Support and legal',
+      children: [
+        _SettingsRow(
+          icon: Icons.support_agent_rounded,
+          title: 'Help and support',
+          onTap: () => _showMvpMessage('Help and support'),
+        ),
+        _SettingsRow(
+          icon: Icons.description_outlined,
+          title: 'Terms of Service',
+          onTap: () => _openLegalDocument(LegalDocuments.terms),
+        ),
+        _SettingsRow(
+          icon: Icons.privacy_tip_outlined,
+          title: 'Privacy Policy',
+          onTap: () => _openLegalDocument(LegalDocuments.privacy),
+        ),
+      ],
     );
   }
 
-  Widget _buildSupportCard() {
-    return LoginDemoGlassCard(
-      borderRadius: 22,
-      // Blur disabled: these cards live inside the scroll view.
-      enableBlur: false,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _SectionTitle(
-            title: 'Support & Legal',
-            subtitle: 'Get help and review account policies',
-          ),
-          const SizedBox(height: 8),
-          _ActionRow(
-            title: 'Help & Support',
-            subtitle: 'Get assistance with cashback or account issues',
-            icon: Icons.support_agent_rounded,
-            onTap: () => _showMvpMessage('Help & Support'),
-          ),
-          const _InfoDivider(),
-          _ActionRow(
-            title: 'Terms & Conditions',
-            subtitle: 'Review SmartMoney usage terms',
-            icon: Icons.description_outlined,
-            onTap: () => _showMvpMessage('Terms & Conditions'),
-          ),
-          const _InfoDivider(),
-          _ActionRow(
-            title: 'Privacy Policy',
-            subtitle: 'See how account data is handled',
-            icon: Icons.privacy_tip_outlined,
-            onTap: () => _showMvpMessage('Privacy Policy'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLogoutCard() {
+  Widget _buildSessionActions() {
     final danger = SmColors.of(context).danger;
 
-    return LoginDemoGlassCard(
-      borderRadius: 22,
-      // Blur disabled: these cards live inside the scroll view.
-      enableBlur: false,
-      padding: const EdgeInsets.all(16),
-      child: OutlinedButton.icon(
-        onPressed: _logout,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: danger,
-          side: BorderSide(color: danger.withValues(alpha: 0.42)),
-          minimumSize: const Size.fromHeight(50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        icon: const Icon(Icons.logout_rounded),
-        label: const Text(
-          'Logout',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = SmColors.of(context);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: colors.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
+        OutlinedButton.icon(
+          onPressed: _logout,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: danger,
+            side: BorderSide(color: danger.withValues(alpha: 0.42)),
+            minimumSize: const Size.fromHeight(50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          icon: const Icon(Icons.logout_rounded),
+          label: const Text(
+            'Log out',
+            style: TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: TextStyle(
-            color: colors.textMuted,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+        const SizedBox(height: 22),
+        Center(
+          child: TextButton(
+            onPressed: _openDeleteAccount,
+            style: TextButton.styleFrom(foregroundColor: danger),
+            child: const Text(
+              'Delete account',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ),
       ],
@@ -816,85 +687,84 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
+/// A labelled group of [_SettingsRow]s inside one card.
+class _Section extends StatelessWidget {
+  const _Section({required this.label, required this.children});
 
   final String label;
-  final String value;
-  final IconData icon;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final colors = SmColors.of(context);
-    final displayValue = value.isEmpty ? 'Not available' : value;
+    final rows = <Widget>[];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: colors.primary, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: colors.textMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  displayValue,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+    for (var i = 0; i < children.length; i++) {
+      if (i > 0) {
+        rows.add(Divider(height: 1, thickness: 1, color: colors.border));
+      }
+      rows.add(children[i]);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+          child: Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              color: colors.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
             ),
           ),
-        ],
-      ),
+        ),
+        LoginDemoGlassCard(
+          borderRadius: 20,
+          // Blur disabled: these cards live inside the scroll view.
+          enableBlur: false,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          child: Column(children: rows),
+        ),
+      ],
     );
   }
 }
 
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({
-    required this.title,
-    required this.subtitle,
+/// One row of a [_Section]: icon, title, optional subtitle, and an optional
+/// trailing widget. Tappable rows (those with [onTap]) get a chevron unless a
+/// [trailing] widget is supplied.
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({
     required this.icon,
-    required this.onTap,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
   });
 
-  final String title;
-  final String subtitle;
   final IconData icon;
-  final VoidCallback onTap;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = SmColors.of(context);
+    final displayTitle = title.isEmpty ? 'Not available' : title;
+
+    final trailingWidget =
+        trailing ??
+        (onTap != null
+            ? Icon(
+                Icons.chevron_right_rounded,
+                color: colors.textMuted,
+                size: 22,
+              )
+            : null);
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -904,12 +774,12 @@ class _ActionRow extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 38,
+              height: 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: colors.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: colors.primary, size: 20),
             ),
@@ -919,33 +789,35 @@ class _ActionRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
+                    displayTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: colors.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.textMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: colors.textMuted,
-              size: 22,
-            ),
+            if (trailingWidget != null) ...[
+              const SizedBox(width: 8),
+              trailingWidget,
+            ],
           ],
         ),
       ),
@@ -953,15 +825,165 @@ class _ActionRow extends StatelessWidget {
   }
 }
 
-class _InfoDivider extends StatelessWidget {
-  const _InfoDivider();
+/// Bottom sheet with a single text field, used for the name and password
+/// edits. [onSubmit] returns an error message to show inline, or null when
+/// the change was saved (the sheet then closes with `true`).
+class _TextEntrySheet extends StatefulWidget {
+  const _TextEntrySheet({
+    required this.title,
+    required this.hintText,
+    required this.icon,
+    required this.submitLabel,
+    required this.onSubmit,
+    this.initialValue = '',
+    this.extraHintText,
+    this.obscure = false,
+    this.capitalization = TextCapitalization.none,
+  });
+
+  final String title;
+  final String hintText;
+  final IconData icon;
+  final String submitLabel;
+  final String initialValue;
+
+  /// When set, a "current value" field is shown above the main one and its
+  /// text is passed to [onSubmit] as `extra` (used for the current password).
+  final String? extraHintText;
+  final bool obscure;
+  final TextCapitalization capitalization;
+  final Future<String?> Function(String value, String? extra) onSubmit;
+
+  @override
+  State<_TextEntrySheet> createState() => _TextEntrySheetState();
+}
+
+class _TextEntrySheetState extends State<_TextEntrySheet> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialValue,
+  );
+
+  final _extraController = TextEditingController();
+
+  late bool _hidden = widget.obscure;
+  bool _isSaving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _extraController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_isSaving) return;
+
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+
+    final error = await widget.onSubmit(
+      _controller.text,
+      widget.extraHintText == null ? null : _extraController.text,
+    );
+
+    if (!mounted) return;
+
+    if (error == null) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    setState(() {
+      _isSaving = false;
+      _error = error;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Divider(
-      height: 22,
-      thickness: 1,
-      color: SmColors.of(context).border,
+    final colors = SmColors.of(context);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        20 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            widget.title,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (widget.extraHintText != null) ...[
+            TextField(
+              controller: _extraController,
+              autofocus: true,
+              obscureText: _hidden,
+              enabled: !_isSaving,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                hintText: widget.extraHintText,
+                prefixIcon: Icon(Icons.lock_outline, color: colors.primary),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          TextField(
+            controller: _controller,
+            autofocus: widget.extraHintText == null,
+            obscureText: _hidden,
+            enabled: !_isSaving,
+            textCapitalization: widget.capitalization,
+            onSubmitted: (_) => _submit(),
+            decoration: InputDecoration(
+              hintText: widget.hintText,
+              prefixIcon: Icon(widget.icon, color: colors.primary),
+              suffixIcon: widget.obscure
+                  ? IconButton(
+                      onPressed: () => setState(() => _hidden = !_hidden),
+                      icon: Icon(
+                        _hidden
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: colors.textMuted,
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _error!,
+              style: TextStyle(
+                color: colors.danger,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          LoginDemoGradientButton(
+            label: widget.submitLabel,
+            icon: Icons.check_rounded,
+            isLoading: _isSaving,
+            height: 48,
+            onPressed: _isSaving ? null : _submit,
+          ),
+        ],
+      ),
     );
   }
 }

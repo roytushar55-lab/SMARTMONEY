@@ -189,6 +189,10 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildProfileCard(user),
+        if (user.isDeleted) ...[
+          const SizedBox(height: AdminSpacing.md),
+          _buildArchivedCard(user),
+        ],
         const SizedBox(height: AdminSpacing.xl),
         Text(
           'Lifetime cashback',
@@ -209,6 +213,54 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
         const SizedBox(height: AdminSpacing.md),
         _buildActions(user),
       ],
+    );
+  }
+
+  /// Shown for a self-deleted user: the original details held in the
+  /// restricted archive, and when they will be erased.
+  Widget _buildArchivedCard(AdminUserDetail user) {
+    final archive = user.archivedDetails;
+
+    return Container(
+      padding: const EdgeInsets.all(AdminSpacing.lg),
+      decoration: BoxDecoration(
+        color: AdminColors.surface,
+        borderRadius: BorderRadius.circular(AdminRadius.card),
+        border: Border.all(color: AdminColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Original details (restricted)',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: AdminSpacing.sm),
+          if (archive == null)
+            const Text(
+              'The retention period has passed and the original details '
+              'have been erased.',
+              style: TextStyle(color: AdminColors.textMuted, fontSize: 13),
+            )
+          else ...[
+            Text(archive.fullName.isEmpty ? '—' : archive.fullName),
+            const SizedBox(height: 2),
+            Text(archive.email),
+            const SizedBox(height: 2),
+            Text(archive.mobileNumber),
+            const SizedBox(height: AdminSpacing.sm),
+            Text(
+              'Deleted ${_formatDate(archive.deletedAt)} · retained until '
+              '${_formatDate(archive.purgeAfter)}. Use only for fraud checks '
+              'and open disputes.',
+              style: const TextStyle(
+                color: AdminColors.textMuted,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -246,7 +298,9 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                     : AdminColors.textMuted,
               ),
               const SizedBox(width: AdminSpacing.sm),
-              StatusBadge.active(user.isActive),
+              user.isDeleted
+                  ? StatusBadge.deleted()
+                  : StatusBadge.active(user.isActive),
             ],
           ),
         ],
@@ -339,6 +393,12 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
+            )
+          else if (user.isDeleted)
+            const Text(
+              'This account was deleted by the user. It cannot be activated '
+              'or deactivated.',
+              style: TextStyle(color: AdminColors.textMuted, fontSize: 13),
             )
           else
             OutlinedButton.icon(

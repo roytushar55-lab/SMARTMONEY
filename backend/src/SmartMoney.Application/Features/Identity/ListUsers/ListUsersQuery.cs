@@ -13,11 +13,14 @@ public sealed class ListUsersQuery : IQuery<AdminUserListResponse>
 
     public bool? IsActive { get; }
 
-    public ListUsersQuery(int page, int pageSize, string? search = null, bool? isActive = null)
+    public bool? IsDeleted { get; }
+
+    public ListUsersQuery(int page, int pageSize, string? search = null, bool? isActive = null, bool? isDeleted = null)
     {
         Page = page;
         PageSize = pageSize;
         Search = search;
         IsActive = isActive;
+        IsDeleted = isDeleted;
     }
 }

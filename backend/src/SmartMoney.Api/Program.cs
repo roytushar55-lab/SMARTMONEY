@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SmartMoney.Infrastructure.DependencyInjection;
 using SmartMoney.Infrastructure.Persistence.Context;
 using SmartMoney.Infrastructure.Persistence.Seed;
@@ -65,6 +66,12 @@ using (var scope = app.Services.CreateScope())
     await RoleSeeder.SeedAsync(context);
     await CashbackSettingsSeeder.SeedAsync(context);
     await SuperAdminSeeder.SeedAsync(context, app.Configuration);
+
+    // Erase the archived details of deleted accounts once their retention
+    // period has passed. Runs on every start; there is no scheduled job yet.
+    await context.DeletedUserArchives
+        .Where(archive => archive.PurgeAfter <= DateTime.UtcNow)
+        .ExecuteDeleteAsync();
 }
 
 // Configure the HTTP request pipeline.

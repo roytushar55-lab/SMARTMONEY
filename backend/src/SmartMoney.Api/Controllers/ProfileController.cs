@@ -3,8 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartMoney.Api.Storage;
 using SmartMoney.Application.Abstractions.Authentication;
+using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
+using SmartMoney.Application.Contracts.Identity.DeleteAccount;
+using SmartMoney.Application.Features.Identity.DeleteAccount;
 using SmartMoney.Domain.Entities;
+using SmartMoney.Domain.Enums;
 
 namespace SmartMoney.Api.Controllers;
 
@@ -28,17 +32,20 @@ public sealed class ProfileController : ControllerBase
     private readonly IPasswordHasher _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProfilePhotoStorage _profilePhotoStorage;
+    private readonly ICommandHandler<DeleteAccountCommand, DeleteAccountResult> _deleteAccountHandler;
 
     public ProfileController(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
         IUnitOfWork unitOfWork,
-        IProfilePhotoStorage profilePhotoStorage)
+        IProfilePhotoStorage profilePhotoStorage,
+        ICommandHandler<DeleteAccountCommand, DeleteAccountResult> deleteAccountHandler)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _unitOfWork = unitOfWork;
         _profilePhotoStorage = profilePhotoStorage;
+        _deleteAccountHandler = deleteAccountHandler;
     }
 
     [HttpGet]
@@ -119,6 +126,20 @@ public sealed class ProfileController : ControllerBase
             return NotFound(new
             {
                 message = "Profile was not found."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            user.PasswordHash is null ||
+            !_passwordHasher.Verify(
+                request.CurrentPassword,
+                user.PasswordHash))
+        {
+            // 400, not 401: the mobile client treats 401 as an expired
+            // session and would try to refresh the token.
+            return BadRequest(new
+            {
+                message = "Current password is incorrect."
             });
         }
 
@@ -219,6 +240,59 @@ public sealed class ProfileController : ControllerBase
         return Ok(ProfileResponse.FromUser(user));
     }
 
+    [HttpPost("delete-account")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteAccount(
+        [FromBody] DeleteAccountRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                out Guid userId))
+        {
+            return Unauthorized();
+        }
+
+        DeleteAccountResult result;
+
+        try
+        {
+            result = await _deleteAccountHandler.HandleAsync(
+                new DeleteAccountCommand(userId, request.Password),
+                cancellationToken);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (KeyNotFoundException exception)
+        {
+            return NotFound(new { message = exception.Message });
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
+
+        // The account is already deleted at this point; a storage hiccup
+        // must not turn that into a failed request.
+        try
+        {
+            await _profilePhotoStorage.DeleteByPublicUrlAsync(
+                result.PreviousProfileImageUrl,
+                cancellationToken);
+        }
+        catch
+        {
+        }
+
+        return NoContent();
+    }
+
     private async Task<User?> GetCurrentUserAsync(
         CancellationToken cancellationToken)
     {
@@ -229,13 +303,19 @@ public sealed class ProfileController : ControllerBase
             return null;
         }
 
-        return await _userRepository.GetByIdAsync(id, cancellationToken);
+        User? user = await _userRepository.GetByIdAsync(id, cancellationToken);
+
+        return user is { Status: UserStatus.Deleted } ? null : user;
     }
 }
 
 public sealed record UpdateProfileNameRequest(string Name);
 
-public sealed record ChangeProfilePasswordRequest(string NewPassword);
+public sealed record ChangeProfilePasswordRequest(
+    string CurrentPassword,
+    string NewPassword);
+
+public sealed record DeleteAccountRequest(string Password);
 
 public sealed class UploadProfilePhotoRequest
 {

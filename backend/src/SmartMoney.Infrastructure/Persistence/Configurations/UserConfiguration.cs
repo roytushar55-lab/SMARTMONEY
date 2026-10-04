@@ -26,6 +26,12 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.PasswordHash)
             .HasMaxLength(500);
 
+        builder.Property(x => x.ConsentVersion)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.ConsentIpAddress)
+            .HasMaxLength(45);
+
         builder.Property(x => x.GoogleId)
             .HasMaxLength(255);
 

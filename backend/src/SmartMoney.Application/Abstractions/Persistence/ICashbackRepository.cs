@@ -48,6 +48,15 @@ public interface ICashbackRepository
         int pageSize,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Change-tracked. A user's never-confirmed cashback (Pending, or
+    /// AwaitingAdminReview without a prior confirmation) — what account
+    /// deletion forfeits.
+    /// </summary>
+    Task<IReadOnlyList<Cashback>> ListUnconfirmedByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
     Task<int> CountByUserIdAsync(
         Guid userId,
         CancellationToken cancellationToken = default);

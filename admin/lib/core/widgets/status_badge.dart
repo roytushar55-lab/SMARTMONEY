@@ -10,6 +10,12 @@ class StatusBadge extends StatelessWidget {
   final String label;
   final Color color;
 
+  /// The user deleted their own account (distinct from an admin
+  /// deactivation, which shows as "Inactive").
+  factory StatusBadge.deleted() {
+    return const StatusBadge(label: 'Deleted', color: AdminColors.danger);
+  }
+
   factory StatusBadge.active(bool isActive) {
     return StatusBadge(
       label: isActive ? 'Active' : 'Inactive',

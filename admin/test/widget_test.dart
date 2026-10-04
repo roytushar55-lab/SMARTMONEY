@@ -25,16 +25,9 @@ void main() {
     expect(find.text('Send code'), findsOneWidget);
   });
 
-  testWidgets('Continue with Google shows a not-available message', (
-    tester,
-  ) async {
+  testWidgets('Login screen has no Google sign-in option', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
-    await tester.ensureVisible(find.text('Continue with Google'));
-    await tester.tap(find.text('Continue with Google'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 750));
-
-    expect(find.textContaining('Google sign-in'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsNothing);
   });
 }

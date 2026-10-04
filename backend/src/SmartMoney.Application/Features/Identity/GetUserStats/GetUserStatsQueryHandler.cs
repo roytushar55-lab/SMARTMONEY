@@ -26,14 +26,17 @@ public sealed class GetUserStatsQueryHandler
             true, cancellationToken);
         var deactivatedCount = await _userRepository.CountByActiveStatusAsync(
             false, cancellationToken);
+        var deletedCount = await _userRepository.CountDeletedAsync(
+            cancellationToken);
         var newThisWeek = await _userRepository.CountCreatedSinceAsync(
             DateTime.UtcNow.AddDays(-7), cancellationToken);
 
         return new AdminUserStatsResponse
         {
-            TotalUsers = activeCount + deactivatedCount,
+            TotalUsers = activeCount + deactivatedCount + deletedCount,
             ActiveUsers = activeCount,
             DeactivatedUsers = deactivatedCount,
+            DeletedUsers = deletedCount,
             NewThisWeek = newThisWeek
         };
     }

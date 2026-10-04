@@ -21,6 +21,9 @@ public sealed class SmartMoneyDbContext : DbContext, IUnitOfWork
     public DbSet<Cashback> Cashbacks => Set<Cashback>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    public DbSet<DeletedUserArchive> DeletedUserArchives
+        => Set<DeletedUserArchive>();
     public DbSet<EmailVerificationOtp> EmailVerificationOtps
     => Set<EmailVerificationOtp>();
 

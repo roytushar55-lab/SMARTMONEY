@@ -15,6 +15,26 @@ public sealed class RegisterUserValidator
         ValidatePassword(command.Password, errors);
         ValidateReferralCode(command.ReferralCode, errors);
 
+        if (!command.AgeConfirmed)
+        {
+            errors.Add("You must confirm that you are 18 years or older.");
+        }
+
+        if (!command.TermsAccepted)
+        {
+            errors.Add(
+                "You must accept the Terms of Service and Privacy Policy.");
+        }
+
+        if (string.IsNullOrWhiteSpace(command.ConsentVersion))
+        {
+            errors.Add("Consent version is required.");
+        }
+        else if (command.ConsentVersion.Trim().Length > 50)
+        {
+            errors.Add("Consent version must not exceed 50 characters.");
+        }
+
         return errors;
     }
 
