@@ -12,17 +12,9 @@ public class User : BaseEntity
     public string MobileNumber { get; private set; } = string.Empty;
 
     /// <summary>
-    /// Null for accounts created via an external provider (Google) that have
-    /// never set a password.
+    /// Null once an account is deleted (it can no longer sign in).
     /// </summary>
     public string? PasswordHash { get; private set; }
-
-    /// <summary>
-    /// Google's stable per-account subject id, set once a Google sign-in has
-    /// been linked to this account. Null for accounts that have never used
-    /// Google sign-in.
-    /// </summary>
-    public string? GoogleId { get; private set; }
 
     public string? ProfileImageUrl { get; private set; }
 
@@ -40,8 +32,7 @@ public class User : BaseEntity
 
     /// <summary>
     /// When the user ticked the age (18+) and Terms/Privacy checkboxes at
-    /// signup. Null for accounts created before consent was captured, and
-    /// for Google-created accounts.
+    /// signup. Null for accounts created before consent was captured.
     /// </summary>
     public DateTime? ConsentAcceptedAt { get; private set; }
 
@@ -122,7 +113,6 @@ public class User : BaseEntity
         Email = $"deleted-{suffix}@deleted.invalid";
         MobileNumber = $"del-{suffix[..12]}";
         PasswordHash = null;
-        GoogleId = null;
         ProfileImageUrl = null;
         IsActive = false;
         Status = UserStatus.Deleted;

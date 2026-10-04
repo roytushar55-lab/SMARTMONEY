@@ -64,7 +64,7 @@ public sealed class LoginUserCommandHandler
 
         if (user.PasswordHash is null)
         {
-            // Google-only account: there is no password to check against.
+            // No password on file (e.g. a deleted account): nothing to check against.
             throw new InvalidOperationException(
                 "Invalid email or password.");
         }

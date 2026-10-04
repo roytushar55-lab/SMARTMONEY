@@ -32,13 +32,6 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.ConsentIpAddress)
             .HasMaxLength(45);
 
-        builder.Property(x => x.GoogleId)
-            .HasMaxLength(255);
-
-        builder.HasIndex(x => x.GoogleId)
-            .IsUnique()
-            .HasFilter("\"GoogleId\" IS NOT NULL");
-
         builder.Property(x => x.ProfileImageUrl)
             .HasMaxLength(500);
 
