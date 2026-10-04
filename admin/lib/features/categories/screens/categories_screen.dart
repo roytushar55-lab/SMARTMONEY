@@ -208,16 +208,16 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         }
 
         return AdminStickyTable(
-          columns: const ['Name', 'Slug', 'Order', 'Status', ''],
-          columnWidths: const [160, 160, 70, 100, 70],
+          columns: const ['Name', 'Slug', 'Order', 'Status'],
+          columnWidths: const [160, 160, 70, 100],
           columnAlignments: const [
             Alignment.centerLeft,
             Alignment.centerLeft,
             Alignment.centerLeft,
             Alignment.center,
-            Alignment.centerLeft,
           ],
           itemCount: filtered.length,
+          onRowTap: (index) => _edit(filtered[index]),
           cellsBuilder: (context, index) {
             final category = filtered[index];
 
@@ -228,10 +228,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: StatusBadge.active(category.isActive),
-              ),
-              TextButton(
-                onPressed: () => _edit(category),
-                child: const Text('Edit'),
               ),
             ];
           },

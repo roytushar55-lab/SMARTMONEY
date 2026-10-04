@@ -275,18 +275,17 @@ class _StoresScreenState extends State<StoresScreen> {
             'Categories',
             'Featured',
             'Status',
-            '',
           ],
-          columnWidths: const [160, 160, 200, 90, 100, 70],
+          columnWidths: const [160, 160, 200, 90, 100],
           columnAlignments: const [
             Alignment.centerLeft,
             Alignment.centerLeft,
             Alignment.centerLeft,
             Alignment.centerLeft,
             Alignment.center,
-            Alignment.centerLeft,
           ],
           itemCount: filtered.length,
+          onRowTap: (index) => _edit(filtered[index]),
           cellsBuilder: (context, index) {
             final store = filtered[index];
 
@@ -304,10 +303,6 @@ class _StoresScreenState extends State<StoresScreen> {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: StatusBadge.active(store.isActive),
-              ),
-              TextButton(
-                onPressed: () => _edit(store),
-                child: const Text('Edit'),
               ),
             ];
           },

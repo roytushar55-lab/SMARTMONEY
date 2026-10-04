@@ -1,6 +1,7 @@
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Application.Contracts.Identity.ChangeUserRole;
+using SmartMoney.Domain.Enums;
 
 namespace SmartMoney.Application.Features.Identity.ChangeUserRole;
 
@@ -50,6 +51,12 @@ public sealed class ChangeUserRoleCommandHandler
         if (user is null)
         {
             return null;
+        }
+
+        if (user.Status == UserStatus.Deleted)
+        {
+            throw new InvalidOperationException(
+                "This account was deleted by the user; its role cannot be changed.");
         }
 
         var roleType = ChangeUserRoleValidator.ParseRole(command.Role);

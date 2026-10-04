@@ -105,13 +105,12 @@ class _CashbackNetworksScreenState extends State<CashbackNetworksScreen> {
 
   Widget _buildTable() {
     return AdminStickyTable(
-      columns: const ['Name', 'Code', 'Status', ''],
-      columnWidths: const [160, 120, 100, 90],
+      columns: const ['Name', 'Code', 'Status'],
+      columnWidths: const [160, 120, 100],
       columnAlignments: const [
         Alignment.centerLeft,
         Alignment.centerLeft,
         Alignment.center,
-        Alignment.centerLeft,
       ],
       itemCount: _networks.length,
       onRowTap: (index) => _openNetwork(_networks[index]),
@@ -124,10 +123,6 @@ class _CashbackNetworksScreenState extends State<CashbackNetworksScreen> {
           FittedBox(
             fit: BoxFit.scaleDown,
             child: StatusBadge.active(network.isActive),
-          ),
-          TextButton(
-            onPressed: () => _openNetwork(network),
-            child: const Text('Manage'),
           ),
         ];
       },

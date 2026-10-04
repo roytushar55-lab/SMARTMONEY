@@ -279,15 +279,15 @@ class _AffiliateScreenState extends State<AffiliateScreen>
         else
           Expanded(
             child: AdminStickyTable(
-              columns: const ['Name', 'Code', 'Status', ''],
-              columnWidths: const [160, 120, 100, 70],
+              columns: const ['Name', 'Code', 'Status'],
+              columnWidths: const [160, 120, 100],
               columnAlignments: const [
                 Alignment.centerLeft,
                 Alignment.centerLeft,
                 Alignment.center,
-                Alignment.centerLeft,
               ],
               itemCount: _networks.length,
+              onRowTap: (index) => _editNetwork(_networks[index]),
               cellsBuilder: (context, index) {
                 final network = _networks[index];
 
@@ -297,10 +297,6 @@ class _AffiliateScreenState extends State<AffiliateScreen>
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: StatusBadge.active(network.isActive),
-                  ),
-                  TextButton(
-                    onPressed: () => _editNetwork(network),
-                    child: const Text('Edit'),
                   ),
                 ];
               },
@@ -351,17 +347,16 @@ class _AffiliateScreenState extends State<AffiliateScreen>
                 'Network',
                 'External merchant id',
                 'Status',
-                '',
               ],
-              columnWidths: const [160, 140, 200, 100, 70],
+              columnWidths: const [160, 140, 200, 100],
               columnAlignments: const [
                 Alignment.centerLeft,
                 Alignment.centerLeft,
                 Alignment.centerLeft,
                 Alignment.center,
-                Alignment.centerLeft,
               ],
               itemCount: filtered.length,
+              onRowTap: (index) => _editMapping(filtered[index]),
               cellsBuilder: (context, index) {
                 final mapping = filtered[index];
 
@@ -372,10 +367,6 @@ class _AffiliateScreenState extends State<AffiliateScreen>
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: StatusBadge.active(mapping.isActive),
-                  ),
-                  TextButton(
-                    onPressed: () => _editMapping(mapping),
-                    child: const Text('Edit'),
                   ),
                 ];
               },

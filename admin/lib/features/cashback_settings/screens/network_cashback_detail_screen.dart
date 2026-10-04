@@ -288,8 +288,9 @@ class _NetworkCashbackDetailScreenState
     return AdminStickyTable(
       shrinkWrap: true,
       columns: const ['Store', 'Category', 'User share', 'Window', ''],
-      columnWidths: const [150, 150, 100, 90, 90],
+      columnWidths: const [150, 150, 100, 90, 50],
       itemCount: overrides.length,
+      onRowTap: (index) => _editOverride(overrides[index]),
       cellsBuilder: (context, index) {
         final override = overrides[index];
 
@@ -301,11 +302,6 @@ class _NetworkCashbackDetailScreenState
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _compactIconButton(
-                onPressed: () => _editOverride(override),
-                icon: Icons.edit_outlined,
-                tooltip: 'Edit',
-              ),
               _compactIconButton(
                 onPressed: () => _deleteOverride(override),
                 icon: Icons.delete_outline,

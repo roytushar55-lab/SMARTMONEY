@@ -283,9 +283,8 @@ class _OffersScreenState extends State<OffersScreen> {
             'Cashback',
             'Featured',
             'Status',
-            '',
           ],
-          columnWidths: const [200, 140, 100, 140, 90, 100, 70],
+          columnWidths: const [200, 140, 100, 140, 90, 100],
           columnAlignments: const [
             Alignment.centerLeft,
             Alignment.centerLeft,
@@ -293,9 +292,9 @@ class _OffersScreenState extends State<OffersScreen> {
             Alignment.centerLeft,
             Alignment.center,
             Alignment.center,
-            Alignment.centerLeft,
           ],
           itemCount: filtered.length,
+          onRowTap: (index) => _edit(filtered[index]),
           cellsBuilder: (context, index) {
             final offer = filtered[index];
 
@@ -326,10 +325,6 @@ class _OffersScreenState extends State<OffersScreen> {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: StatusBadge.active(offer.isActive),
-              ),
-              TextButton(
-                onPressed: () => _edit(offer),
-                child: const Text('Edit'),
               ),
             ];
           },

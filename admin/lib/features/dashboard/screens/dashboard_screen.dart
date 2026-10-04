@@ -163,6 +163,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: AdminColors.danger,
                         ),
                       ),
+                      const SizedBox(width: AdminSpacing.md),
+                      Expanded(
+                        child: _CompactStat(
+                          icon: Icons.delete_outline_rounded,
+                          value: '${_userStats?.deletedUsers ?? 0}',
+                          label: 'Deleted',
+                          color: AdminColors.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: AdminSpacing.xxl),

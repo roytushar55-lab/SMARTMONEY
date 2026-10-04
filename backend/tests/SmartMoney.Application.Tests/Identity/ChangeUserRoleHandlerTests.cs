@@ -101,4 +101,20 @@ public sealed class ChangeUserRoleHandlerTests
 
         Assert.Null(response);
     }
+
+    [Fact]
+    public async Task DeletedAccount_CannotChangeRole()
+    {
+        var user = NewCustomer();
+        user.AnonymizeForDeletion();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateHandler().HandleAsync(
+                new ChangeUserRoleCommand(user.Id, "admin", _actingUserId),
+                CancellationToken.None));
+
+        Assert.Equal(_customerRole.Id, user.RoleId);
+        _unitOfWork.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
 }
