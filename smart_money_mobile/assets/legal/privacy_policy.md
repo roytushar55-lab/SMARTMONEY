@@ -18,7 +18,7 @@ We collect the following categories of information:
 - **Name** — the full name you provide when creating your account.
 - **Email address** — used for account identification, login, verification (OTP), and communication.
 - **Mobile number** — collected as contact information only. SmartMoney does not currently verify mobile numbers or use them for OTP purposes; account verification is performed via your email address only (see Section 7).
-- **Account/login information** — your password (stored in encrypted/hashed form, never in plain text), account status, and, if you sign in with Google, your Google account identifier used solely to authenticate you.
+- **Account/login information** — your password (stored in encrypted/hashed form, never in plain text) and account status.
 - **Profile information** — an optional profile photo you upload, stored via our cloud storage provider.
 - **Technical information** — details that your device and the App send automatically with each request, such as the type of software making the request, used to keep the App working correctly and securely.
 - **IP address** — collected automatically by our servers as part of standard request logging, for security and fraud-prevention purposes.
@@ -84,7 +84,6 @@ We send you transactional messages about your account, cashback, and withdrawals
 We work with the following third parties to operate SmartMoney:
 
 - **Affiliate network partner(s)** — currently including **Cuelinks**, used to generate affiliate links, route clicks to merchants, and attribute purchases for cashback calculation (see Section 5). SmartMoney's platform is built to support additional affiliate network partners over time; this Policy will be updated to name any newly added partner.
-- **Google Sign-In** — an optional authentication method; if you use it, Google shares your basic account identifier with us to verify your identity. We do not receive your Google password.
 - **Microsoft Azure** — our cloud hosting, database, and storage provider (Hyderabad, India region), used to run the App's backend, store account and transaction data, and store uploaded content such as profile photos and catalogue media.
 - **Cashfree** — our payout provider, used solely to process withdrawal payouts to your UPI ID or bank account once SmartMoney's withdrawal feature is live. Cashfree is never used to collect payments from you.
 
@@ -160,7 +159,7 @@ Subject to applicable law (including India's Digital Personal Data Protection Ac
 - **Access** the personal data we hold about you
 - **Correct** inaccurate or incomplete personal data
 - **Delete** your personal data, subject to the limitations in Sections 12–13
-- **Withdraw consent** you previously gave, where our processing relies on consent (e.g., optional Google Sign-In), without affecting the lawfulness of processing before withdrawal
+- **Withdraw consent** you previously gave, where our processing relies on consent (e.g., an optional profile photo), without affecting the lawfulness of processing before withdrawal
 - **Nominate** another individual to exercise these rights on your behalf in the event of your death or incapacity, in the manner prescribed under the Digital Personal Data Protection Act, 2023
 - **Raise a grievance** with our Grievance Officer (Section 17) if you believe your data has been misused or your rights have not been honored
 - **Escalate to the Data Protection Board of India** if you are not satisfied with how your grievance is resolved by our Grievance Officer

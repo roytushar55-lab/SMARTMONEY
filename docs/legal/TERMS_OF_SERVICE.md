@@ -27,7 +27,7 @@ SmartMoney is not a merchant, retailer, or seller of the products or services yo
 
 ## 4. Account Registration and Security
 
-To use most features of the App, you must create an account using your email address and a password, or by signing in with Google. You agree to:
+To use most features of the App, you must create an account using your email address and a password. You agree to:
 
 - Provide accurate, current, and complete information when registering, including your full name, email address, and mobile number.
 - Keep your login credentials confidential and never share your password with anyone.
@@ -140,7 +140,6 @@ See Section 13 of the Privacy Policy for how your personal data is handled after
 The App relies on the following third parties to operate:
 
 - **Affiliate network partner(s)**, currently including Cuelinks, to generate affiliate links, route your clicks to merchants, and attribute purchases for cashback calculation.
-- **Google Sign-In**, as an optional way to create and access your account.
 - **Microsoft Azure**, to host the App's backend and store your account, transaction, and uploaded data.
 - **Cashfree**, to process withdrawal payouts once that feature is live.
 
