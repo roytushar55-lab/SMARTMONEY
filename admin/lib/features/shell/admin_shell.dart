@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/auth/admin_session.dart';
+import '../../core/auth/jwt_claims.dart';
 import '../../core/theme/admin_colors.dart';
 import '../affiliate/screens/affiliate_screen.dart';
 import '../cashback_settings/screens/cashback_networks_screen.dart';
@@ -47,7 +48,16 @@ class _AdminShellState extends State<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
-    final claims = AdminSession.instance.claims.value;
+    // Rebuilds when claims change (e.g. a refresh reveals a demotion), so
+    // SuperAdmin-only items disappear without a reload. UI-only: the server
+    // enforces roles on every request.
+    return ValueListenableBuilder(
+      valueListenable: AdminSession.instance.claims,
+      builder: (context, claims, _) => _buildShell(claims),
+    );
+  }
+
+  Widget _buildShell(JwtClaims? claims) {
     final isSuperAdmin = claims?.isSuperAdmin ?? false;
 
     return LayoutBuilder(
@@ -258,7 +268,15 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   Widget _buildContent() {
-    switch (_section) {
+    final isSuperAdmin =
+        AdminSession.instance.claims.value?.isSuperAdmin ?? false;
+    final section =
+        !isSuperAdmin &&
+            (_section == _Section.users || _section == _Section.affiliate)
+        ? _Section.dashboard
+        : _section;
+
+    switch (section) {
       case _Section.dashboard:
         return DashboardScreen(
           onOpenReviewQueue: (status) =>

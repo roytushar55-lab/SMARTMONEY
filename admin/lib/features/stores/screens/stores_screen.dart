@@ -116,19 +116,25 @@ class _StoresScreenState extends State<StoresScreen> {
     return 'No ${statusWord}stores match "$_search".';
   }
 
+  /// Monotonic token so a slow earlier response can't overwrite a later one.
+  int _loadToken = 0;
+
   Future<void> _load() async {
+    final token = ++_loadToken;
     setState(() => _state = ViewState.loading);
     try {
       final results = await Future.wait([
         _storeService.list(),
         _categoryService.list(),
       ]);
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _stores = results[0] as List<AdminStore>;
         _categories = results[1] as List<AdminCategory>;
         _state = _stores.isEmpty ? ViewState.empty : ViewState.success;
       });
     } on ApiException catch (error) {
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _errorMessage = error.message;
         _state = ViewState.error;

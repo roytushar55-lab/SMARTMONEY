@@ -4,30 +4,36 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../auth/auth_api_service.dart';
+import '../auth/token_refresher.dart';
 import '../auth/token_storage_service.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
+import 'network_errors.dart';
 
 /// Shared HTTP helper for admin endpoints: attaches the stored access token,
-/// and on a 401 refreshes it once via `/api/identity/refresh-token` and
-/// retries. Mirrors the mobile app's AuthorizedApiClient.
+/// and on a 401 refreshes it once (single-flight, shared across every
+/// request) via `/api/identity/refresh-token` and retries. Mirrors the mobile
+/// app's AuthorizedApiClient.
+///
+/// Transport failures (no connection, timeout, malformed body) are converted
+/// to [ApiException] with a user-safe message so screens never hang or show
+/// raw exception text.
 class AuthorizedApiClient {
   AuthorizedApiClient({
     http.Client? client,
     TokenStorageService tokenStorageService = const TokenStorageService(),
-    AuthApiService? authApiService,
+    TokenRefresher? refresher,
     this.baseUrl = ApiConfig.baseUrl,
+    this.timeout = apiTimeout,
   }) : _client = client ?? http.Client(),
        _tokenStorageService = tokenStorageService,
-       _authApiService = authApiService ?? AuthApiService(baseUrl: baseUrl),
-       _ownsAuthApiService = authApiService == null;
+       _refresher = refresher ?? TokenRefresher.shared;
 
   final http.Client _client;
   final TokenStorageService _tokenStorageService;
-  final AuthApiService _authApiService;
-  final bool _ownsAuthApiService;
+  final TokenRefresher _refresher;
   final String baseUrl;
+  final Duration timeout;
 
   static const String signInMessage = 'Sign in to continue.';
   static const String sessionExpiredMessage =
@@ -99,7 +105,11 @@ class AuthorizedApiClient {
 
     if (response.body.isEmpty) return null;
 
-    return jsonDecode(response.body);
+    try {
+      return jsonDecode(response.body);
+    } on FormatException {
+      throw const ApiException(badResponseMessage);
+    }
   }
 
   String _extractErrorMessage(http.Response response, String fallback) {
@@ -114,70 +124,64 @@ class AuthorizedApiClient {
     return fallback;
   }
 
-  Future<Map<String, String>> _authorizedHeaders() async {
+  Future<String> _accessToken() async {
     final token = await _tokenStorageService.getAccessToken();
 
     if (token == null || token.isEmpty) {
       throw const ApiException(signInMessage, statusCode: 401);
     }
 
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
+    return token;
+  }
+
+  Map<String, String> _headersFor(String token) => {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+
+  Future<http.Response> _guardedSend(
+    Future<http.Response> Function(Map<String, String> headers) send,
+    String token,
+  ) {
+    return guardNetwork(() => send(_headersFor(token)), timeout: timeout);
   }
 
   Future<http.Response> sendAuthorizedRequest(
     Future<http.Response> Function(Map<String, String> headers) send,
   ) async {
-    final response = await send(await _authorizedHeaders());
+    final usedToken = await _accessToken();
+    final response = await _guardedSend(send, usedToken);
 
     if (response.statusCode != 401) {
       return response;
     }
 
-    final refreshed = await _refreshAccessToken();
+    // Another request may already have refreshed while this one was in
+    // flight; if the stored token changed, just retry with it instead of
+    // spending the (rotated) refresh token again.
+    final currentToken = await _tokenStorageService.getAccessToken();
+    final alreadyRefreshed =
+        currentToken != null &&
+        currentToken.isNotEmpty &&
+        currentToken != usedToken;
 
-    if (!refreshed) {
-      throw const ApiException(sessionExpiredMessage, statusCode: 401);
+    if (!alreadyRefreshed) {
+      final result = await _refresher.refresh();
+
+      switch (result) {
+        case RefreshResult.refreshed:
+          break;
+        case RefreshResult.sessionExpired:
+          throw const ApiException(sessionExpiredMessage, statusCode: 401);
+        case RefreshResult.unavailable:
+          throw const ApiException(networkErrorMessage);
+      }
     }
 
-    return send(await _authorizedHeaders());
-  }
-
-  Future<bool> _refreshAccessToken() async {
-    final storedRefreshToken = await _tokenStorageService.getRefreshToken();
-
-    if (storedRefreshToken == null || storedRefreshToken.isEmpty) {
-      return false;
-    }
-
-    // Decide the tier BEFORE the network call: the refresh lands in the same
-    // tier the login used, so an unchecked "keep me signed in" never gets
-    // silently upgraded to a durable session by a routine token refresh.
-    final persistent = await _tokenStorageService.isPersistent();
-
-    try {
-      final response = await _authApiService.refreshToken(storedRefreshToken);
-
-      await _tokenStorageService.saveTokens(
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        accessTokenExpiresAt: response.accessTokenExpiresAt,
-        persistent: persistent,
-      );
-
-      return true;
-    } catch (_) {
-      await _tokenStorageService.clearTokens();
-      return false;
-    }
+    return _guardedSend(send, await _accessToken());
   }
 
   void dispose() {
     _client.close();
-    if (_ownsAuthApiService) {
-      _authApiService.dispose();
-    }
   }
 }

@@ -50,7 +50,11 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
     super.dispose();
   }
 
+  /// Monotonic token so a slow earlier response can't overwrite a later one.
+  int _loadToken = 0;
+
   Future<void> _load() async {
+    final token = ++_loadToken;
     setState(() => _state = ViewState.loading);
 
     try {
@@ -58,11 +62,13 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
         status: _statusFilter,
         page: _pageNumber,
       );
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _page = page;
         _state = page.items.isEmpty ? ViewState.empty : ViewState.success;
       });
     } on ApiException catch (error) {
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _errorMessage = error.message;
         _state = ViewState.error;
@@ -79,7 +85,7 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
   }
 
   void _changePage(int delta) {
-    setState(() => _pageNumber += delta);
+    setState(() => _pageNumber = (_pageNumber + delta).clamp(1, 1 << 30));
     _load();
   }
 
@@ -124,18 +130,21 @@ class _CashbackReviewScreenState extends State<CashbackReviewScreen> {
     required String successMessage,
     bool danger = false,
   }) async {
-    final confirmed = await showConfirmDialog(
-      context,
-      title: confirmTitle,
-      message: confirmMessage,
-      confirmLabel: confirmTitle.split(' ').first,
-      danger: danger,
-    );
-    if (!confirmed || !mounted) return;
-
-    setState(() => _busyIds.add(cashback.id));
+    // Mark busy synchronously, before any await, so a second click (or a
+    // second dialog) for the same row can never start another decision.
+    if (!_busyIds.add(cashback.id)) return;
+    setState(() {});
 
     try {
+      final confirmed = await showConfirmDialog(
+        context,
+        title: confirmTitle,
+        message: confirmMessage,
+        confirmLabel: confirmTitle.split(' ').first,
+        danger: danger,
+      );
+      if (!confirmed || !mounted) return;
+
       await action(cashback.id);
       if (!mounted) return;
       showSuccessSnackBar(context, successMessage);

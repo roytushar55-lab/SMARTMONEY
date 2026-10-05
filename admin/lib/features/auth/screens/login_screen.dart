@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/admin_session.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../widgets/login_brand_panel.dart';
 import 'forgot_password_dialog.dart';
@@ -48,6 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (error) {
       setState(() {
         _errorMessage = error is StateError
+            ? error.message
+            : (error is ApiException && error.statusCode == null)
             ? error.message
             : 'Invalid email or password.';
       });

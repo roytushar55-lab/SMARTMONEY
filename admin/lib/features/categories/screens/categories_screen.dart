@@ -96,15 +96,21 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     return 'No ${statusWord}categories match "$_search".';
   }
 
+  /// Monotonic token so a slow earlier response can't overwrite a later one.
+  int _loadToken = 0;
+
   Future<void> _load() async {
+    final token = ++_loadToken;
     setState(() => _state = ViewState.loading);
     try {
       final categories = await _service.list();
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _categories = categories;
         _state = categories.isEmpty ? ViewState.empty : ViewState.success;
       });
     } on ApiException catch (error) {
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _errorMessage = error.message;
         _state = ViewState.error;

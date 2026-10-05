@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../network/api_config.dart';
+import '../network/api_exception.dart';
+import '../network/network_errors.dart';
 import 'forgot_password_request.dart';
 import 'forgot_password_response.dart';
 import 'login_response.dart';
@@ -15,6 +17,9 @@ import 'reset_password_response.dart';
 /// SuperAdmin. Forgot/reset password reuse the same generic identity
 /// endpoints the mobile app uses, since an admin's `User` row is no
 /// different from a customer's for that purpose.
+///
+/// Every failure surfaces as an [ApiException] with a user-safe message;
+/// transport errors and timeouts carry no status code.
 class AuthApiService {
   AuthApiService({http.Client? client, this.baseUrl = ApiConfig.baseUrl})
     : _client = client ?? http.Client();
@@ -22,92 +27,95 @@ class AuthApiService {
   final http.Client _client;
   final String baseUrl;
 
-  Future<LoginResponse> login(String email, String password) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.trim(), 'password': password}),
+  Future<http.Response> _post(String path, Object body) {
+    return guardNetwork(
+      () => _client.post(
+        Uri.parse('$baseUrl$path'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ),
     );
+  }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        _extractErrorMessage(response, 'Invalid email or password.'),
-      );
+  Future<LoginResponse> login(String email, String password) async {
+    final response = await _post('/api/identity/login', {
+      'email': email.trim(),
+      'password': password,
+    });
+
+    _ensureSuccess(response, 'Invalid email or password.');
+
+    return LoginResponse.fromJson(_decodeMap(response));
+  }
+
+  /// Revokes the refresh token on the server so a copy of it stops working.
+  /// Best-effort: signing out must never fail because the network is down.
+  Future<void> logout(String refreshToken) async {
+    try {
+      await _post('/api/identity/logout', {'refreshToken': refreshToken});
+    } catch (_) {
+      // Local sign-out proceeds regardless.
     }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Invalid login response.');
-    }
-
-    return LoginResponse.fromJson(decoded);
   }
 
   Future<RefreshTokenResponse> refreshToken(String refreshToken) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/refresh-token'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'refreshToken': refreshToken}),
-    );
+    final response = await _post('/api/identity/refresh-token', {
+      'refreshToken': refreshToken,
+    });
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'Token refresh failed with status ${response.statusCode}.',
+      throw ApiException(
+        'Token refresh failed.',
+        statusCode: response.statusCode,
       );
     }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Invalid refresh-token response.');
-    }
-
-    return RefreshTokenResponse.fromJson(decoded);
+    return RefreshTokenResponse.fromJson(_decodeMap(response));
   }
 
   Future<ForgotPasswordResponse> forgotPassword(
     ForgotPasswordRequest request,
   ) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/forgot-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
+    final response = await _post(
+      '/api/identity/forgot-password',
+      request.toJson(),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        _extractErrorMessage(response, 'Unable to send reset code.'),
-      );
-    }
+    _ensureSuccess(response, 'Unable to send reset code.');
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Invalid forgot-password response.');
-    }
-
-    return ForgotPasswordResponse.fromJson(decoded);
+    return ForgotPasswordResponse.fromJson(_decodeMap(response));
   }
 
   Future<ResetPasswordResponse> resetPassword(
     ResetPasswordRequest request,
   ) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/reset-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
+    final response = await _post(
+      '/api/identity/reset-password',
+      request.toJson(),
     );
 
+    _ensureSuccess(response, 'Unable to reset password.');
+
+    return ResetPasswordResponse.fromJson(_decodeMap(response));
+  }
+
+  void _ensureSuccess(http.Response response, String fallback) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        _extractErrorMessage(response, 'Unable to reset password.'),
+      throw ApiException(
+        _extractErrorMessage(response, fallback),
+        statusCode: response.statusCode,
       );
     }
+  }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Invalid reset-password response.');
+  Map<String, dynamic> _decodeMap(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } on FormatException {
+      // Falls through to the generic message below.
     }
-
-    return ResetPasswordResponse.fromJson(decoded);
+    throw const ApiException(badResponseMessage);
   }
 
   String _extractErrorMessage(http.Response response, String fallback) {

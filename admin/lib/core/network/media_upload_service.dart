@@ -9,6 +9,8 @@ import 'package:http_parser/http_parser.dart';
 import '../auth/token_storage_service.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
+import 'network_errors.dart';
+import 'safe_url.dart';
 
 /// Wraps `POST /api/admin/media/upload` (multipart) — separate from
 /// [AuthorizedApiClient] because that helper only speaks JSON bodies.
@@ -17,12 +19,14 @@ class MediaUploadService {
     http.Client? client,
     TokenStorageService tokenStorageService = const TokenStorageService(),
     this.baseUrl = ApiConfig.baseUrl,
+    this.timeout = apiTimeout,
   }) : _client = client ?? http.Client(),
        _tokenStorageService = tokenStorageService;
 
   final http.Client _client;
   final TokenStorageService _tokenStorageService;
   final String baseUrl;
+  final Duration timeout;
 
   /// [folder] is one of "stores", "offers", "categories" — anything else
   /// falls back to a flat "misc" prefix on the backend. Returns the public URL.
@@ -53,8 +57,10 @@ class MediaUploadService {
             ),
           );
 
-    final streamed = await _client.send(request);
-    final response = await http.Response.fromStream(streamed);
+    final response = await guardNetwork(() async {
+      final streamed = await _client.send(request);
+      return http.Response.fromStream(streamed);
+    }, timeout: timeout);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
@@ -63,12 +69,21 @@ class MediaUploadService {
       );
     }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic> || decoded['url'] is! String) {
-      throw const FormatException('Invalid upload response.');
+    Object? decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } on FormatException {
+      throw const ApiException(badResponseMessage);
     }
 
-    return decoded['url'] as String;
+    final url = decoded is Map<String, dynamic> && decoded['url'] is String
+        ? safeMediaUrl(decoded['url'] as String)
+        : null;
+    if (url == null) {
+      throw const ApiException(badResponseMessage);
+    }
+
+    return url;
   }
 
   MediaType? _parseContentType(String contentType) {

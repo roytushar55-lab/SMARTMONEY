@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/auth/auth_api_service.dart';
 import '../../../core/auth/forgot_password_request.dart';
 import '../../../core/auth/reset_password_request.dart';
+import '../../../core/network/network_errors.dart';
 import '../../../core/theme/admin_colors.dart';
 import '../../../core/widgets/spaced_column.dart';
 
@@ -81,7 +82,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
 
       setState(() {
         _submitting = false;
-        _error = error.toString().replaceFirst('Exception: ', '');
+        _error = safeErrorMessage(error);
       });
     }
   }
@@ -144,7 +145,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
 
       setState(() {
         _submitting = false;
-        _error = error.toString().replaceFirst('Exception: ', '');
+        _error = safeErrorMessage(error);
       });
     }
   }

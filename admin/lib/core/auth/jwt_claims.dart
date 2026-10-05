@@ -43,6 +43,16 @@ class JwtClaims {
 
   String? get name => _claims[_nameClaimUri] as String?;
 
+  /// The `exp` claim as a UTC time, or null when absent/unparseable.
+  DateTime? get expiresAt {
+    final exp = _claims['exp'];
+    if (exp is! num) return null;
+    return DateTime.fromMillisecondsSinceEpoch(
+      exp.toInt() * 1000,
+      isUtc: true,
+    );
+  }
+
   bool get isAdminOrAbove => role == 'Admin' || role == 'SuperAdmin';
 
   bool get isSuperAdmin => role == 'SuperAdmin';
