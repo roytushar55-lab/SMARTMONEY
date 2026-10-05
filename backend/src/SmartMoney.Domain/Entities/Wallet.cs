@@ -79,6 +79,17 @@ public class Wallet : BaseEntity
         MarkAsUpdated();
     }
 
+    /// <summary>
+    /// Touches the row without changing balances so the optimistic-concurrency
+    /// token is checked on save: account deletion reads the balance, and must
+    /// fail (rather than delete a user whose wallet just got credited) if
+    /// another request changed it in between.
+    /// </summary>
+    public void RecordAccountClosure()
+    {
+        MarkAsUpdated();
+    }
+
     public void Withdraw(decimal amount)
     {
         if (amount <= 0)

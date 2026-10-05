@@ -182,4 +182,37 @@ public sealed class ResetPasswordHandlerTests
                 new ResetPasswordCommand("user@test.local", "123456", weakPassword),
                 CancellationToken.None));
     }
+
+    [Fact]
+    public async Task WrongOtp_CountsAsFailedAttempt_AndIsSaved()
+    {
+        var user = NewActiveUser();
+        var otp = NewOtp(user.Id);
+        SetupValid(user, otp);
+        _otpHasher.Setup(h => h.Verify(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateHandler().HandleAsync(
+                new ResetPasswordCommand(user.Email, "000000", "NewPassw0rd!"),
+                CancellationToken.None));
+
+        Assert.Equal(1, otp.FailedAttempts);
+        Assert.False(otp.IsUsed);
+        _unitOfWork.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void Otp_DiesAfterMaxFailedAttempts()
+    {
+        var otp = NewOtp(Guid.NewGuid());
+
+        for (var i = 0; i < SmartMoney.Domain.Common.OtpPolicy.MaxFailedAttempts; i++)
+        {
+            Assert.False(otp.IsLocked);
+            otp.RegisterFailedAttempt();
+        }
+
+        Assert.True(otp.IsLocked);
+    }
 }

@@ -33,6 +33,7 @@ public sealed class ConversionCashbackProcessor
     private readonly IWalletRepository _walletRepository;
     private readonly IAffiliateClickRepository _clickRepository;
     private readonly IWalletTransactionRepository _walletTransactionRepository;
+    private readonly IUserRepository _userRepository;
 
     public ConversionCashbackProcessor(
         ICashbackRepository cashbackRepository,
@@ -40,7 +41,8 @@ public sealed class ConversionCashbackProcessor
         IStoreRepository storeRepository,
         IWalletRepository walletRepository,
         IAffiliateClickRepository clickRepository,
-        IWalletTransactionRepository walletTransactionRepository)
+        IWalletTransactionRepository walletTransactionRepository,
+        IUserRepository userRepository)
     {
         _cashbackRepository = cashbackRepository;
         _rateResolver = rateResolver;
@@ -48,6 +50,7 @@ public sealed class ConversionCashbackProcessor
         _walletRepository = walletRepository;
         _clickRepository = clickRepository;
         _walletTransactionRepository = walletTransactionRepository;
+        _userRepository = userRepository;
     }
 
     /// <summary>
@@ -156,6 +159,16 @@ public sealed class ConversionCashbackProcessor
             MidpointRounding.AwayFromZero);
 
         if (amount <= 0)
+        {
+            return null;
+        }
+
+        // A deleted account has no one to pay: crediting its wallet would park
+        // money where nobody can ever reach it. Skip silently; the conversion
+        // row itself is still recorded by the caller.
+        var owner = await _userRepository.GetByIdAsync(click.UserId, cancellationToken);
+
+        if (owner is null || owner.Status == UserStatus.Deleted)
         {
             return null;
         }

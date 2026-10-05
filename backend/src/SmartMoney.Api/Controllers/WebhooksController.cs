@@ -47,7 +47,13 @@ public sealed class WebhooksController : ControllerBase
         [FromQuery] string? token,
         CancellationToken cancellationToken)
     {
-        if (!IsTokenValid(token, "Webhooks:CuelinksToken"))
+        // Prefer the X-Webhook-Token header (query strings end up in proxy and
+        // access logs); the query parameter stays for providers that can only
+        // configure a URL.
+        string? presentedToken =
+            Request.Headers["X-Webhook-Token"].FirstOrDefault() ?? token;
+
+        if (!IsTokenValid(presentedToken, "Webhooks:CuelinksToken"))
         {
             return Unauthorized();
         }
@@ -104,12 +110,16 @@ public sealed class WebhooksController : ControllerBase
         }
         catch (Exception exception)
         {
-            // A non-2xx makes providers retry and can get a slow endpoint
-            // disabled. The raw payload was NOT stored on this path, so log
-            // loudly for manual replay instead of failing the callback.
+            // Fail loudly so the provider RETRIES. Answering 200 here would
+            // silently drop the conversion (and the user's cashback) on any
+            // transient failure - a DB blip, or losing a concurrency race with
+            // an admin action on the same wallet. Ingestion is idempotent on
+            // (network, transaction id), so a retry is safe.
             _logger.LogError(exception, "Cuelinks postback processing failed.");
 
-            return Ok(new { received = true, outcome = "DeferredForReview" });
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new { message = "Temporarily unable to process; please retry." });
         }
     }
 

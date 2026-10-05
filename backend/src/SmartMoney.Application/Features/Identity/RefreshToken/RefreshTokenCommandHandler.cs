@@ -49,6 +49,20 @@ public sealed class RefreshTokenCommandHandler
                 command.RefreshToken.Trim(),
                 cancellationToken);
 
+        // A refresh token is single-use. Seeing a revoked one again means it
+        // was copied (or replayed): burn every session of that user so the
+        // thief and the owner both have to sign in again. A short grace
+        // window covers an honest client that fired two refreshes at once.
+        if (existingRefreshToken is { IsRevoked: true } reused &&
+            reused.RevokedAt is { } revokedAt &&
+            DateTime.UtcNow - revokedAt > TimeSpan.FromSeconds(10))
+        {
+            await _refreshTokenRepository.RevokeAllForUserAsync(
+                reused.UserId,
+                cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
         if (existingRefreshToken is null ||
             existingRefreshToken.IsRevoked ||
             existingRefreshToken.IsExpired())
@@ -90,7 +104,7 @@ public sealed class RefreshTokenCommandHandler
         {
             AccessToken = jwtToken.AccessToken,
             AccessTokenExpiresAt = jwtToken.ExpiresAt,
-            RefreshToken = newRefreshToken.Token
+            RefreshToken = refreshTokenValue
         };
     }
 }

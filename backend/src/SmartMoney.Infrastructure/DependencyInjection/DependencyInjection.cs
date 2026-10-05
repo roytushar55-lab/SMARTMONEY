@@ -1,12 +1,16 @@
-﻿using System.Text;
+﻿using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SmartMoney.Application.Abstractions.Affiliate;
 using SmartMoney.Application.Abstractions.Authentication;
 using SmartMoney.Application.Abstractions.Persistence;
+using SmartMoney.Domain.Enums;
 using SmartMoney.Infrastructure.Affiliate;
 using SmartMoney.Infrastructure.Authentication;
 using SmartMoney.Infrastructure.Persistence.Context;
@@ -56,7 +60,41 @@ public static class DependencyInjection
         // Authentication services
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IOtpGenerator, SecureOtpGenerator>();
-        services.AddSingleton<IEmailOtpSender, ConsoleEmailOtpSender>();
+        // OTP delivery. SMTP when configured; the console sender (which prints
+        // the code) is allowed in Development only. Anywhere else a missing
+        // Email:Host is a startup error, not a silent "emails go nowhere".
+        services.Configure<EmailOptions>(
+            configuration.GetSection(EmailOptions.SectionName));
+
+        services.AddSingleton<IEmailOtpSender>(serviceProvider =>
+        {
+            var emailOptions = serviceProvider
+                .GetRequiredService<IOptions<EmailOptions>>().Value;
+
+            if (!string.IsNullOrWhiteSpace(emailOptions.Host))
+            {
+                if (string.IsNullOrWhiteSpace(emailOptions.FromAddress))
+                {
+                    throw new InvalidOperationException(
+                        "Email:FromAddress must be set when Email:Host is configured.");
+                }
+
+                return ActivatorUtilities
+                    .CreateInstance<SmtpEmailOtpSender>(serviceProvider);
+            }
+
+            if (serviceProvider.GetRequiredService<IHostEnvironment>()
+                .IsDevelopment())
+            {
+                return ActivatorUtilities
+                    .CreateInstance<ConsoleEmailOtpSender>(serviceProvider);
+            }
+
+            throw new InvalidOperationException(
+                "Email is not configured. Set Email:Host, Email:FromAddress, " +
+                "Email:Username and Email:Password (outside Development OTP " +
+                "codes cannot be delivered or printed).");
+        });
         services.AddSingleton<IOtpHasher, SecureOtpHasher>();
 
         // Affiliate services
@@ -108,6 +146,14 @@ public static class DependencyInjection
                 "JWT secret key was not configured.");
         }
 
+        // HS256 is only as strong as its key: refuse short or guessable keys
+        // rather than silently signing tokens with them.
+        if (Encoding.UTF8.GetByteCount(jwtOptions.SecretKey) < 32)
+        {
+            throw new InvalidOperationException(
+                "JWT secret key must be at least 32 bytes (use a long random value).");
+        }
+
         // JWT services
         services.Configure<JwtOptions>(
             configuration.GetSection(JwtOptions.SectionName));
@@ -135,8 +181,62 @@ public static class DependencyInjection
                                     jwtOptions.SecretKey)),
 
                         ValidateLifetime = true,
-                        ClockSkew = TimeSpan.Zero
+                        ClockSkew = TimeSpan.Zero,
+
+                        ValidAlgorithms = [SecurityAlgorithms.HmacSha256]
                     };
+
+                // A signed token proves who the user *was* when it was
+                // issued. Re-check the account on every request so a
+                // deleted, deactivated or re-roled user stops working
+                // immediately instead of when the token expires.
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        string? userIdClaim = context.Principal
+                            ?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                        string? roleClaim = context.Principal
+                            ?.FindFirst(ClaimTypes.Role)?.Value;
+
+                        if (!Guid.TryParse(userIdClaim, out Guid userId))
+                        {
+                            context.Fail("Invalid token subject.");
+                            return;
+                        }
+
+                        var db = context.HttpContext.RequestServices
+                            .GetRequiredService<SmartMoneyDbContext>();
+
+                        var current = await db.Users
+                            .AsNoTracking()
+                            .Where(user => user.Id == userId)
+                            .Select(user => new
+                            {
+                                user.IsActive,
+                                user.Status,
+                                Role = user.Role!.Name
+                            })
+                            .FirstOrDefaultAsync(
+                                context.HttpContext.RequestAborted);
+
+                        if (current is null ||
+                            !current.IsActive ||
+                            current.Status != UserStatus.Active)
+                        {
+                            context.Fail("Account is not active.");
+                            return;
+                        }
+
+                        if (!string.Equals(
+                                roleClaim,
+                                current.Role.ToString(),
+                                StringComparison.Ordinal))
+                        {
+                            context.Fail("Role changed; sign in again.");
+                        }
+                    }
+                };
             });
 
         return services;

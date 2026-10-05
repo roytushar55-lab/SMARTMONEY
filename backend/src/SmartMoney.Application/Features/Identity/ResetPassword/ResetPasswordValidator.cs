@@ -1,3 +1,5 @@
+using SmartMoney.Application.Common;
+
 namespace SmartMoney.Application.Features.Identity.ResetPassword;
 
 public sealed class ResetPasswordValidator
@@ -51,17 +53,10 @@ public sealed class ResetPasswordValidator
         }
     }
 
-    private static void ValidatePassword(string password, ICollection<string> errors)
+    private static void ValidatePassword(
+        string password,
+        ICollection<string> errors)
     {
-        if (string.IsNullOrWhiteSpace(password))
-        {
-            errors.Add("New password is required.");
-            return;
-        }
-
-        if (password.Length < 8)
-        {
-            errors.Add("New password must be at least 8 characters long.");
-        }
+        PasswordPolicy.Validate(password, errors);
     }
 }

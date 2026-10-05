@@ -15,6 +15,16 @@ public sealed class ForgotPasswordHandlerTests
     private readonly Mock<IEmailOtpSender> _emailSender = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
+    public ForgotPasswordHandlerTests()
+    {
+        // No recently issued codes unless a test says otherwise.
+        _otps.Setup(o => o.ListCreatedAtSinceAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DateTime>());
+    }
+
     private ForgotPasswordCommandHandler CreateHandler()
     {
         return new ForgotPasswordCommandHandler(
@@ -113,5 +123,49 @@ public sealed class ForgotPasswordHandlerTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => CreateHandler().HandleAsync(
                 new ForgotPasswordCommand("not-an-email"), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RecentlyIssuedCode_IsThrottled_SameResponse_NoEmail()
+    {
+        var user = NewUser();
+        _users.Setup(u => u.GetByEmailAsync(user.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _otps.Setup(o => o.ListCreatedAtSinceAsync(
+                user.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<DateTime> { DateTime.UtcNow.AddSeconds(-10) });
+
+        var response = await CreateHandler().HandleAsync(
+            new ForgotPasswordCommand(user.Email),
+            CancellationToken.None);
+
+        Assert.NotNull(response.Message);
+        _emailSender.Verify(
+            e => e.SendPasswordResetOtpAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task TooManyCodesInAnHour_IsThrottled()
+    {
+        var user = NewUser();
+        _users.Setup(u => u.GetByEmailAsync(user.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        var spread = Enumerable.Range(1, 5)
+            .Select(i => DateTime.UtcNow.AddMinutes(-10 * i))
+            .ToList();
+        _otps.Setup(o => o.ListCreatedAtSinceAsync(
+                user.Id, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(spread);
+
+        await CreateHandler().HandleAsync(
+            new ForgotPasswordCommand(user.Email),
+            CancellationToken.None);
+
+        _emailSender.Verify(
+            e => e.SendPasswordResetOtpAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

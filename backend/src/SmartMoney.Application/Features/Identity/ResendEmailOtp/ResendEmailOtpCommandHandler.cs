@@ -3,6 +3,7 @@ using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Application.Contracts.Identity.ResendEmailOtp;
 using SmartMoney.Domain.Enums;
+using SmartMoney.Domain.Common;
 using SmartMoney.Domain.Entities;
 
 namespace SmartMoney.Application.Features.Identity.ResendEmailOtp;
@@ -64,28 +65,34 @@ public sealed class ResendEmailOtpCommandHandler
             email,
             cancellationToken);
 
-        if (user is null)
+        // One response whether or not the account exists or needs a code, so
+        // this endpoint cannot be used to enumerate registered emails.
+        var genericResponse = new ResendEmailOtpResponse
         {
-            throw new InvalidOperationException(
-                "No account was found with this email address.");
+            Email = email,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(2),
+            Message = "If this account is waiting for verification, a new code has been sent."
+        };
+
+        if (user is null ||
+            !user.IsActive ||
+            user.IsEmailVerified ||
+            user.Status != UserStatus.Pending)
+        {
+            return genericResponse;
         }
 
-        if (!user.IsActive)
-        {
-            throw new InvalidOperationException(
-                "Your account has been deactivated.");
-        }
+        // Throttle silently (same response): stops endless fresh codes, each
+        // with a fresh set of guesses, and inbox spam.
+        DateTime now = DateTime.UtcNow;
+        var recent = await _emailVerificationOtpRepository.ListCreatedAtSinceAsync(
+            user.Id,
+            now.AddHours(-1),
+            cancellationToken);
 
-        if (user.IsEmailVerified)
+        if (!OtpPolicy.CanIssue(recent, now))
         {
-            throw new InvalidOperationException(
-                "Email address is already verified.");
-        }
-
-        if (user.Status != UserStatus.Pending)
-        {
-            throw new InvalidOperationException(
-                "This account is not eligible for email verification.");
+            return genericResponse;
         }
 
         string otp = _otpGenerator.Generate(6);

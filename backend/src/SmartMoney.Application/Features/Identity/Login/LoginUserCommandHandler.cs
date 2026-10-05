@@ -56,15 +56,13 @@ public sealed class LoginUserCommandHandler
             email,
             cancellationToken);
 
-        if (user is null)
+        if (user?.PasswordHash is null)
         {
-            throw new InvalidOperationException(
-                "Invalid email or password.");
-        }
+            // Unknown email, or an account with no password (deleted). Burn the
+            // same CPU a real check costs so the response time does not reveal
+            // whether the email is registered.
+            _passwordHasher.Hash(command.Password);
 
-        if (user.PasswordHash is null)
-        {
-            // No password on file (e.g. a deleted account): nothing to check against.
             throw new InvalidOperationException(
                 "Invalid email or password.");
         }
@@ -89,6 +87,13 @@ public sealed class LoginUserCommandHandler
         {
             throw new InvalidOperationException(
                 "Please verify your email address before logging in.");
+        }
+
+        // Stored hash is weaker than today's parameters: now that the plaintext
+        // is in hand, upgrade it (saved with the refresh token below).
+        if (_passwordHasher.NeedsRehash(user.PasswordHash))
+        {
+            user.ChangePasswordHash(_passwordHasher.Hash(command.Password));
         }
 
         JwtTokenResult jwtToken =
@@ -118,7 +123,7 @@ public sealed class LoginUserCommandHandler
             Email = user.Email,
             AccessToken = jwtToken.AccessToken,
             AccessTokenExpiresAt = jwtToken.ExpiresAt,
-            RefreshToken = refreshToken.Token
+            RefreshToken = refreshTokenValue
         };
     }
 }

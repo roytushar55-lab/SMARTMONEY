@@ -73,6 +73,12 @@ public sealed class ResetPasswordCommandHandler
 
         if (!otpMatches)
         {
+            // Count the miss before rejecting: after MaxFailedAttempts wrong
+            // guesses this code is dead, so a 6-digit code cannot be brute
+            // forced inside its lifetime.
+            passwordResetOtp.RegisterFailedAttempt();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
             throw new InvalidOperationException(invalidMessage);
         }
 

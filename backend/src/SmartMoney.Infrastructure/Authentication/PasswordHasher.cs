@@ -7,7 +7,10 @@ public sealed class PasswordHasher : IPasswordHasher
 {
     private const int SaltSize = 16;
     private const int HashSize = 32;
-    private const int Iterations = 100_000;
+    // OWASP guidance for PBKDF2-HMAC-SHA256. Hashes made with fewer
+    // iterations still verify (the count is stored in the hash) and are
+    // upgraded on the next successful login.
+    private const int Iterations = 600_000;
 
     private static readonly HashAlgorithmName Algorithm =
         HashAlgorithmName.SHA256;
@@ -30,6 +33,15 @@ public sealed class PasswordHasher : IPasswordHasher
             Iterations,
             Convert.ToBase64String(salt),
             Convert.ToBase64String(hash));
+    }
+
+    public bool NeedsRehash(string passwordHash)
+    {
+        string[] parts = passwordHash.Split('.');
+
+        return parts.Length != 3 ||
+            !int.TryParse(parts[0], out int iterations) ||
+            iterations < Iterations;
     }
 
     public bool Verify(

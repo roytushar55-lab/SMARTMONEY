@@ -18,11 +18,13 @@ public sealed class RefreshTokenRepository : IRefreshTokenRepository
         string token,
         CancellationToken cancellationToken = default)
     {
+        string tokenHash = RefreshToken.HashToken(token);
+
         return _context.RefreshTokens
             .Include(refreshToken => refreshToken.User)
             .ThenInclude(user => user.Role)
             .SingleOrDefaultAsync(
-                refreshToken => refreshToken.Token == token,
+                refreshToken => refreshToken.Token == tokenHash,
                 cancellationToken);
     }
 

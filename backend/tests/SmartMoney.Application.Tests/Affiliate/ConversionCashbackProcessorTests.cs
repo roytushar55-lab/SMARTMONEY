@@ -15,6 +15,7 @@ public sealed class ConversionCashbackProcessorTests
     private readonly Mock<IWalletRepository> _wallets = new();
     private readonly Mock<IAffiliateClickRepository> _clicks = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactions = new();
+    private readonly Mock<IUserRepository> _users = new();
 
     private readonly Guid _clickId = Guid.NewGuid();
     private readonly Guid _userId = Guid.NewGuid();
@@ -25,7 +26,17 @@ public sealed class ConversionCashbackProcessorTests
     {
         return new ConversionCashbackProcessor(
             _cashbacks.Object, _rateResolver.Object, _stores.Object, _wallets.Object,
-            _clicks.Object, _walletTransactions.Object);
+            _clicks.Object, _walletTransactions.Object, _users.Object);
+    }
+
+    private static User NewUser()
+    {
+        return new User(
+            "Test User",
+            "test@example.com",
+            "9876543210",
+            "hash",
+            Guid.NewGuid());
     }
 
     private AffiliateConversion NewConversion(
@@ -65,6 +76,9 @@ public sealed class ConversionCashbackProcessorTests
 
         _wallets.Setup(w => w.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingWallet);
+
+        _users.Setup(u => u.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(NewUser());
     }
 
     [Fact]
@@ -320,5 +334,26 @@ public sealed class ConversionCashbackProcessorTests
         return new Cashback(
             Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
             100.00m, DateTime.UtcNow.AddDays(60));
+    }
+
+    [Fact]
+    public async Task Pending_ForDeletedUser_CreatesNoCashbackAndLeavesWalletAlone()
+    {
+        var wallet = new Wallet(_userId);
+        SetupHappyDependencies(existingWallet: wallet);
+
+        var deletedUser = NewUser();
+        deletedUser.AnonymizeForDeletion();
+        _users.Setup(u => u.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(deletedUser);
+
+        await CreateProcessor().ProcessAsync(
+            NewConversion("pending"),
+            CancellationToken.None);
+
+        Assert.Equal(0, wallet.PendingBalance);
+        _cashbacks.Verify(
+            c => c.AddAsync(It.IsAny<Cashback>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

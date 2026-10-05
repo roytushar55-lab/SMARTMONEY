@@ -67,6 +67,12 @@ public sealed class AdminMediaController : ControllerBase
         string objectPath = $"{folder}/{Guid.NewGuid():N}{extension}";
 
         await using Stream stream = file.OpenReadStream();
+
+        if (!await ImageSignature.MatchesAsync(stream, contentType, cancellationToken))
+        {
+            return BadRequest(new { message = "The file is not a valid JPG, PNG or WebP image." });
+        }
+
         StoredCatalogueMedia stored = await _catalogueMediaStorage.UploadAsync(
             stream, objectPath, contentType, cancellationToken);
 

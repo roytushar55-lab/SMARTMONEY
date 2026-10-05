@@ -52,5 +52,11 @@ public sealed class LoginUserValidator
         {
             errors.Add("Password is required.");
         }
+        else if (password.Length > SmartMoney.Application.Common.PasswordPolicy.MaxLength)
+        {
+            // Never hash an oversized password (PBKDF2 CPU cost); no real
+            // password can be this long, so answer like any wrong one.
+            errors.Add("Invalid email or password.");
+        }
     }
 }

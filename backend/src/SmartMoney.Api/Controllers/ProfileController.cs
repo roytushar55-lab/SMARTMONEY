@@ -5,6 +5,7 @@ using SmartMoney.Api.Storage;
 using SmartMoney.Application.Abstractions.Authentication;
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
+using SmartMoney.Application.Common;
 using SmartMoney.Application.Contracts.Identity.DeleteAccount;
 using SmartMoney.Application.Features.Identity.DeleteAccount;
 using SmartMoney.Domain.Entities;
@@ -29,6 +30,7 @@ public sealed class ProfileController : ControllerBase
         };
 
     private readonly IUserRepository _userRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProfilePhotoStorage _profilePhotoStorage;
@@ -36,12 +38,14 @@ public sealed class ProfileController : ControllerBase
 
     public ProfileController(
         IUserRepository userRepository,
+        IRefreshTokenRepository refreshTokenRepository,
         IPasswordHasher passwordHasher,
         IUnitOfWork unitOfWork,
         IProfilePhotoStorage profilePhotoStorage,
         ICommandHandler<DeleteAccountCommand, DeleteAccountResult> deleteAccountHandler)
     {
         _userRepository = userRepository;
+        _refreshTokenRepository = refreshTokenRepository;
         _passwordHasher = passwordHasher;
         _unitOfWork = unitOfWork;
         _profilePhotoStorage = profilePhotoStorage;
@@ -111,11 +115,14 @@ public sealed class ProfileController : ControllerBase
         [FromBody] ChangeProfilePasswordRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.NewPassword))
+        IReadOnlyCollection<string> passwordErrors =
+            PasswordPolicy.Validate(request.NewPassword);
+
+        if (passwordErrors.Count > 0)
         {
             return BadRequest(new
             {
-                message = "Password is required."
+                message = string.Join(" ", passwordErrors)
             });
         }
 
@@ -143,9 +150,24 @@ public sealed class ProfileController : ControllerBase
             });
         }
 
+        if (request.NewPassword == request.CurrentPassword)
+        {
+            return BadRequest(new
+            {
+                message = "New password must be different from the current one."
+            });
+        }
+
         string passwordHash = _passwordHasher.Hash(request.NewPassword);
 
         user.ChangePasswordHash(passwordHash);
+
+        // A changed password must lock out anyone holding a stolen session:
+        // every refresh token is revoked, so all devices (this one included)
+        // must sign in again once their short-lived access token lapses.
+        await _refreshTokenRepository.RevokeAllForUserAsync(
+            user.Id,
+            cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -211,6 +233,15 @@ public sealed class ProfileController : ControllerBase
         string? previousProfileImageUrl = user.ProfileImageUrl;
 
         await using Stream stream = photo.OpenReadStream();
+
+        if (!await ImageSignature.MatchesAsync(stream, contentType, cancellationToken))
+        {
+            return BadRequest(new
+            {
+                message = "The file is not a valid JPG, PNG or WebP image."
+            });
+        }
+
         StoredProfilePhoto storedPhoto =
             await _profilePhotoStorage.UploadAsync(
                 stream,

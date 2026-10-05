@@ -69,19 +69,19 @@ public sealed class VerifyEmailOtpCommandHandler
         if (!user.IsActive)
         {
             throw new InvalidOperationException(
-                "Your account has been deactivated.");
+                "Invalid email or OTP.");
         }
 
         if (user.IsEmailVerified)
         {
             throw new InvalidOperationException(
-                "Email address is already verified.");
+                "Invalid email or OTP.");
         }
 
         if (user.Status != UserStatus.Pending)
         {
             throw new InvalidOperationException(
-                "This account is not eligible for email verification.");
+                "Invalid email or OTP.");
         }
 
         var emailVerificationOtp =
@@ -93,7 +93,7 @@ public sealed class VerifyEmailOtpCommandHandler
         if (emailVerificationOtp is null)
         {
             throw new InvalidOperationException(
-                "OTP is invalid or has expired.");
+                "Invalid email or OTP.");
         }
 
         bool otpMatches = _otpHasher.Verify(
@@ -102,6 +102,11 @@ public sealed class VerifyEmailOtpCommandHandler
 
         if (!otpMatches)
         {
+            // Count the miss before rejecting (see ResetPasswordCommandHandler).
+            emailVerificationOtp.RegisterFailedAttempt();
+            await _unitOfWork.SaveChangesAsync(
+                cancellationToken);
+
             throw new InvalidOperationException(
                 "Invalid email or OTP.");
         }

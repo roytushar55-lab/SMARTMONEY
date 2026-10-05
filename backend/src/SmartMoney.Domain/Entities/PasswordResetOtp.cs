@@ -20,6 +20,9 @@ public sealed class PasswordResetOtp : BaseEntity
 
     public DateTime? UsedAt { get; private set; }
 
+    /// <summary>Wrong guesses so far; the code dies at <see cref="OtpPolicy.MaxFailedAttempts"/>.</summary>
+    public int FailedAttempts { get; private set; }
+
     public User User { get; private set; } = null!;
 
     private PasswordResetOtp()
@@ -55,6 +58,14 @@ public sealed class PasswordResetOtp : BaseEntity
         UserId = userId;
         CodeHash = codeHash;
         ExpiresAt = expiresAt;
+    }
+
+    public bool IsLocked => FailedAttempts >= OtpPolicy.MaxFailedAttempts;
+
+    public void RegisterFailedAttempt()
+    {
+        FailedAttempts++;
+        MarkAsUpdated();
     }
 
     public bool IsExpired()

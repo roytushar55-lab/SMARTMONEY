@@ -89,6 +89,8 @@ public sealed class DeleteAccountCommandHandler
                 "Withdraw your wallet balance before deleting your account.");
         }
 
+        wallet?.RecordAccountClosure();
+
         decimal forfeited = 0;
 
         if (wallet is not null)

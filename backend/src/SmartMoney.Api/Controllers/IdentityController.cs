@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Api.Features.Identity.Register;
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Contracts.Identity.Register;
@@ -37,6 +39,10 @@ public sealed class IdentityController : ControllerBase
 
     private readonly ICommandHandler<ResetPasswordCommand,ResetPasswordResponse> _resetPasswordHandler;
 
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
+
+    private readonly IUnitOfWork _unitOfWork;
+
 
     public IdentityController(
         ICommandHandler<
@@ -59,7 +65,9 @@ public sealed class IdentityController : ControllerBase
             ForgotPasswordResponse> forgotPasswordHandler,
         ICommandHandler<
             ResetPasswordCommand,
-            ResetPasswordResponse> resetPasswordHandler)
+            ResetPasswordResponse> resetPasswordHandler,
+        IRefreshTokenRepository refreshTokenRepository,
+        IUnitOfWork unitOfWork)
     {
         _registerUserHandler = registerUserHandler;
         _loginUserHandler = loginUserHandler;
@@ -68,10 +76,13 @@ public sealed class IdentityController : ControllerBase
         _refreshTokenHandler = refreshTokenHandler;
         _forgotPasswordHandler = forgotPasswordHandler;
         _resetPasswordHandler = resetPasswordHandler;
+        _refreshTokenRepository = refreshTokenRepository;
+        _unitOfWork = unitOfWork;
     }
 
     [AllowAnonymous]
     [HttpPost("register")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(RegisterUserResponse),StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -117,6 +128,7 @@ public sealed class IdentityController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(LoginUserResponse),StatusCodes.Status200OK)][ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginUserRequest request,CancellationToken cancellationToken)
@@ -152,6 +164,7 @@ public sealed class IdentityController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("verify-email-otp")]
+    [EnableRateLimiting("otp")]
     [ProducesResponseType(typeof(VerifyEmailOtpResponse),StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> VerifyEmailOtp([FromBody] VerifyEmailOtpRequest request,CancellationToken cancellationToken)
@@ -187,6 +200,7 @@ public sealed class IdentityController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("resend-email-otp")]
+    [EnableRateLimiting("otp")]
     [ProducesResponseType(typeof(ResendEmailOtpResponse),StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ResendEmailOtp([FromBody] ResendEmailOtpRequest request,CancellationToken cancellationToken)
@@ -221,6 +235,7 @@ public sealed class IdentityController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("refresh-token")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(RefreshTokenResponse),StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -256,6 +271,7 @@ public sealed class IdentityController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("otp")]
     [ProducesResponseType(typeof(ForgotPasswordResponse),StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request,CancellationToken cancellationToken)
@@ -284,6 +300,7 @@ public sealed class IdentityController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("reset-password")]
+    [EnableRateLimiting("otp")]
     [ProducesResponseType(typeof(ResetPasswordResponse),StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request,CancellationToken cancellationToken)
@@ -316,5 +333,32 @@ public sealed class IdentityController : ControllerBase
                 message = exception.Message
             });
         }
+    }
+
+    /// <summary>
+    /// Server-side logout: revokes the given refresh token so a copy of it
+    /// (backup, stolen device) stops working. Always 204 so it cannot be
+    /// used to probe which tokens exist.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("logout")]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            var token = await _refreshTokenRepository.GetByTokenAsync(
+                request.RefreshToken.Trim(),
+                cancellationToken);
+
+            if (token is { IsRevoked: false })
+            {
+                token.Revoke();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        return NoContent();
     }
 }

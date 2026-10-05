@@ -134,7 +134,7 @@ public sealed class WebhooksControllerTests
     }
 
     [Fact]
-    public async Task ProcessingFailure_Returns200_ForProviderRetrySafety()
+    public async Task ProcessingFailure_Returns503_SoProviderRetries()
     {
         _handler.Setup(h => h.HandleAsync(
                 It.IsAny<IngestAffiliateConversionCommand>(), It.IsAny<CancellationToken>()))
@@ -143,6 +143,7 @@ public sealed class WebhooksControllerTests
         var result = await CreateController(ValidBody())
             .CuelinksTransactionUpdate(ValidToken, CancellationToken.None);
 
-        Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(503, response.StatusCode);
     }
 }

@@ -16,6 +16,7 @@ public sealed class IngestAffiliateConversionHandlerTests
     private readonly Mock<IStoreRepository> _stores = new();
     private readonly Mock<IWalletRepository> _wallets = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactions = new();
+    private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private readonly AffiliateNetwork _network = new()
@@ -27,6 +28,9 @@ public sealed class IngestAffiliateConversionHandlerTests
 
     public IngestAffiliateConversionHandlerTests()
     {
+        _users.Setup(u => u.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User("Test User", "test@example.com", "9876543210", "hash", Guid.NewGuid()));
+
         _networks.Setup(n => n.GetByCodeAsync("CUELINKS", It.IsAny<CancellationToken>()))
             .ReturnsAsync(_network);
     }
@@ -35,7 +39,7 @@ public sealed class IngestAffiliateConversionHandlerTests
     {
         var processor = new ConversionCashbackProcessor(
             _cashbacks.Object, _rateResolver.Object, _stores.Object, _wallets.Object,
-            _clicks.Object, _walletTransactions.Object);
+            _clicks.Object, _walletTransactions.Object, _users.Object);
 
         return new IngestAffiliateConversionCommandHandler(
             new IngestAffiliateConversionValidator(),

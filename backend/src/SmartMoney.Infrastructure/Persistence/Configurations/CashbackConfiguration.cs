@@ -10,6 +10,14 @@ public sealed class CashbackConfiguration : IEntityTypeConfiguration<Cashback>
     {
         builder.ToTable("Cashbacks");
 
+        // Optimistic concurrency (Postgres xmin): a double approve or an
+        // approve racing a reverse fails with a conflict instead of both
+        // succeeding. See WalletConfiguration.
+        builder.Property<uint>("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.CashbackAmount)

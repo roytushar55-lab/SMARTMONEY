@@ -2,6 +2,7 @@ using SmartMoney.Application.Abstractions.Authentication;
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Abstractions.Persistence;
 using SmartMoney.Application.Contracts.Identity.ForgotPassword;
+using SmartMoney.Domain.Common;
 using SmartMoney.Domain.Entities;
 
 namespace SmartMoney.Application.Features.Identity.ForgotPassword;
@@ -60,6 +61,20 @@ public sealed class ForgotPasswordCommandHandler
         // attacker enumerate registered emails.
         if (user is not null && user.IsActive)
         {
+            // Throttle silently: the response is identical either way, so this
+            // neither reveals the account nor lets someone mint endless fresh
+            // codes (each with a fresh set of guesses) or spam the inbox.
+            DateTime now = DateTime.UtcNow;
+            var recent = await _passwordResetOtpRepository.ListCreatedAtSinceAsync(
+                user.Id,
+                now.AddHours(-1),
+                cancellationToken);
+
+            if (!OtpPolicy.CanIssue(recent, now))
+            {
+                return new ForgotPasswordResponse { Message = GenericMessage };
+            }
+
             string otp = _otpGenerator.Generate(6);
             string otpHash = _otpHasher.Hash(otp);
             DateTime otpExpiresAt = DateTime.UtcNow.AddMinutes(2);
