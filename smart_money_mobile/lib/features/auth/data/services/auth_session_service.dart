@@ -2,7 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 
-import '../models/refresh_token_request.dart';
+import '../../../../core/network/token_refresher.dart';
 import 'auth_api_service.dart';
 import 'token_storage_service.dart';
 
@@ -22,13 +22,8 @@ class AuthSessionService {
   Future<bool> hasValidSession() async {
     try {
       final accessToken = await _tokenStorageService.getAccessToken();
-      final accessTokenExpiresAt =
-          await _tokenStorageService.getAccessTokenExpiresAt();
-
-      debugPrint(
-        'TOKEN FOUND AFTER RELOAD: '
-        '${accessToken != null && accessToken.isNotEmpty}',
-      );
+      final accessTokenExpiresAt = await _tokenStorageService
+          .getAccessTokenExpiresAt();
 
       if (accessToken != null &&
           accessToken.isNotEmpty &&
@@ -39,36 +34,17 @@ class AuthSessionService {
         return true;
       }
 
-      return _refreshAccessToken();
+      final outcome = await TokenRefresher.refresh(
+        tokenStorage: _tokenStorageService,
+        authApi: _authApiService,
+      );
+
+      // A transient failure (offline, timeout, 5xx) keeps the stored
+      // tokens, so the user stays signed in; later requests retry the
+      // refresh and surface a retryable error instead of a logout.
+      return outcome != RefreshOutcome.rejected;
     } catch (error) {
       debugPrint('TOKEN READ ERROR: $error');
-      return false;
-    }
-  }
-
-  Future<bool> _refreshAccessToken() async {
-    final refreshToken = await _tokenStorageService.getRefreshToken();
-
-    if (refreshToken == null || refreshToken.isEmpty) {
-      await _tokenStorageService.clearTokens();
-      return false;
-    }
-
-    try {
-      final response = await _authApiService.refreshToken(
-        RefreshTokenRequest(refreshToken: refreshToken),
-      );
-
-      await _tokenStorageService.saveTokens(
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        accessTokenExpiresAt: response.accessTokenExpiresAt,
-      );
-
-      return true;
-    } catch (error) {
-      debugPrint('TOKEN REFRESH ERROR: $error');
-      await _tokenStorageService.clearTokens();
       return false;
     }
   }

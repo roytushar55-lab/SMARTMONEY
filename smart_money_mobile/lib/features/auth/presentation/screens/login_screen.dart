@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/theme/sm_motion.dart';
 import '../../../../core/theme/sm_radius.dart';
@@ -81,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final request = LoginRequest(
-        email: _emailController.text,
+        email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
@@ -112,7 +113,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error.toString().replaceFirst('Exception: ', '')),
+          content: Text(
+            error is ApiException
+                ? error.message
+                : 'Something went wrong. Please try again.',
+          ),
         ),
       );
     }
@@ -441,8 +446,7 @@ class _SmartMoneyLoginButton extends StatefulWidget {
   final VoidCallback? onPressed;
 
   @override
-  State<_SmartMoneyLoginButton> createState() =>
-      _SmartMoneyLoginButtonState();
+  State<_SmartMoneyLoginButton> createState() => _SmartMoneyLoginButtonState();
 }
 
 class _SmartMoneyLoginButtonState extends State<_SmartMoneyLoginButton> {

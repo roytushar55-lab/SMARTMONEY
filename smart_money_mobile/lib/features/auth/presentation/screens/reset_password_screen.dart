@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/theme/sm_motion.dart';
 import '../../../../core/theme/sm_radius.dart';
@@ -105,14 +106,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       _startResendTimer();
       _otpInputKey.currentState?.clear();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A new code has been sent')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('A new code has been sent')));
     } catch (_) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to resend code. Please try again.')),
+        const SnackBar(
+          content: Text('Unable to resend code. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isResending = false);
@@ -146,9 +149,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.message)));
 
       Navigator.pushNamedAndRemoveUntil(
         context,
@@ -161,7 +164,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       setState(() => _isSubmitting = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : 'Something went wrong. Please try again.',
+          ),
+        ),
       );
     }
   }

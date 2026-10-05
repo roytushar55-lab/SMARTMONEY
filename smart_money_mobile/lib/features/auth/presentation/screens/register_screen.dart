@@ -2,10 +2,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/routes/route_names.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/theme/sm_motion.dart';
 import '../../../../core/theme/sm_radius.dart';
 import '../../../../core/theme/sm_spacing.dart';
+import '../../../../core/utils/password_rules.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../legal/data/legal_documents.dart';
 import '../../../legal/presentation/screens/legal_document_screen.dart';
@@ -57,7 +59,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _openLegalDocument(LegalDocument document) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => LegalDocumentScreen(document: document)),
+      MaterialPageRoute(
+        builder: (_) => LegalDocumentScreen(document: document),
+      ),
     );
   }
 
@@ -144,7 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return 'Password must contain a number';
     }
 
-    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) {
+    if (!hasSpecialCharacter(password)) {
       return 'Password must contain a special character';
     }
 
@@ -185,8 +189,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final request = RegisterRequest(
-        fullName: _fullNameController.text,
-        email: _emailController.text,
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
         phoneNumber: _phoneController.text,
         password: _passwordController.text,
         referralCode: _referralCodeController.text,
@@ -218,7 +222,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       try {
         final loginResponse = await _authApiService.login(
           LoginRequest(
-            email: _emailController.text,
+            email: _emailController.text.trim(),
             password: _passwordController.text,
           ),
         );
@@ -251,19 +255,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (error) {
       if (!mounted) return;
 
-      final errorText = error.toString().toLowerCase();
+      // Only ApiException messages are safe to show; anything else gets a
+      // generic message so raw exception text never reaches the user.
+      final message = error is ApiException
+          ? error.message
+          : 'Unable to create your account. Please try again.';
+      final lower = message.toLowerCase();
+      final alreadyExists =
+          lower.contains('already') ||
+          lower.contains('exists') ||
+          lower.contains('registered');
 
       setState(() {
         _isLoading = false;
 
-        if (errorText.contains('phone')) {
-          _phoneApiError = 'This phone number is already registered.';
-        } else if (errorText.contains('email')) {
-          _emailApiError = 'This email address is already registered.';
-        } else if (errorText.contains('password')) {
-          _passwordApiError = 'Password does not meet the requirements.';
+        if (alreadyExists && lower.contains('phone')) {
+          _phoneApiError = message;
+        } else if (alreadyExists && lower.contains('email')) {
+          _emailApiError = message;
         } else {
-          _generalApiError = 'Unable to create your account. Please try again.';
+          _generalApiError = message;
         }
       });
 
@@ -590,7 +601,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   setState(() => _ageConfirmed = value);
                                 },
                                 label: const TextSpan(
-                                  text: 'I confirm that I am 18 years of age '
+                                  text:
+                                      'I confirm that I am 18 years of age '
                                       'or older.',
                                 ),
                               ),
@@ -725,8 +737,7 @@ class _SmartMoneyRegisterButton extends StatefulWidget {
       _SmartMoneyRegisterButtonState();
 }
 
-class _SmartMoneyRegisterButtonState
-    extends State<_SmartMoneyRegisterButton> {
+class _SmartMoneyRegisterButtonState extends State<_SmartMoneyRegisterButton> {
   bool _hovering = false;
 
   @override

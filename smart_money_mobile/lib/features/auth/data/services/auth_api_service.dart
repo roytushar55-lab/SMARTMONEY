@@ -1,5 +1,7 @@
 import 'dart:convert';
 import '../../../../core/network/api_config.dart';
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/network_guard.dart';
 import '../models/register_response.dart';
 import 'package:http/http.dart' as http;
 import '../models/register_request.dart';
@@ -14,6 +16,9 @@ import '../models/forgot_password_response.dart';
 import '../models/reset_password_request.dart';
 import '../models/reset_password_response.dart';
 
+/// Every failure is surfaced as an [ApiException] whose message is safe to
+/// show in the UI: the server's `{message}` when present, otherwise a generic
+/// fallback. Raw response bodies are never exposed.
 class AuthApiService {
   AuthApiService({http.Client? client, this.baseUrl = ApiConfig.baseUrl})
     : _client = client ?? http.Client();
@@ -21,27 +26,46 @@ class AuthApiService {
   final http.Client _client;
   final String baseUrl;
 
-  Future<RegisterResponse> register(RegisterRequest request) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
+  Future<http.Response> _post(String path, Object body) {
+    return guardNetwork(
+      () => _client.post(
+        Uri.parse('$baseUrl$path'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ),
     );
+  }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'Registration failed with status ${response.statusCode}: '
-        '${response.body}',
-      );
+  Map<String, dynamic> _decodeMap(http.Response response, String what) {
+    final Object? decodedBody;
+    try {
+      decodedBody = jsonDecode(response.body);
+    } on FormatException {
+      throw ApiException('Invalid $what response.');
     }
-
-    final decodedBody = jsonDecode(response.body);
 
     if (decodedBody is! Map<String, dynamic>) {
-      throw const FormatException('Invalid registration response.');
+      throw ApiException('Invalid $what response.');
     }
 
-    return RegisterResponse.fromJson(decodedBody);
+    return decodedBody;
+  }
+
+  void _ensureSuccess(http.Response response, String fallback) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        _extractErrorMessage(response, fallback),
+        statusCode: response.statusCode,
+      );
+    }
+  }
+
+  Future<RegisterResponse> register(RegisterRequest request) async {
+    final response = await _post('/api/identity/register', request.toJson());
+
+    _ensureSuccess(response, 'Registration failed. Please try again.');
+
+    return RegisterResponse.fromJson(_decodeMap(response, 'registration'));
   }
 
   void dispose() {
@@ -49,120 +73,81 @@ class AuthApiService {
   }
 
   Future<void> verifyEmailOtp(VerifyEmailOtpRequest request) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/verify-email-otp'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
+    final response = await _post(
+      '/api/identity/verify-email-otp',
+      request.toJson(),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'OTP verification failed with status ${response.statusCode}: '
-        '${response.body}',
-      );
-    }
+    _ensureSuccess(response, 'Verification failed. Please try again.');
   }
 
   Future<void> resendEmailOtp(ResendEmailOtpRequest request) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/resend-email-otp'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
+    final response = await _post(
+      '/api/identity/resend-email-otp',
+      request.toJson(),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'Resend OTP failed with status ${response.statusCode}: '
-        '${response.body}',
-      );
-    }
+    _ensureSuccess(response, 'Unable to resend the code. Please try again.');
   }
 
   Future<LoginResponse> login(LoginRequest request) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
-    );
+    final response = await _post('/api/identity/login', request.toJson());
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(_extractErrorMessage(response, 'Invalid email or password.'));
-    }
+    _ensureSuccess(response, 'Invalid email or password.');
 
-    final decodedBody = jsonDecode(response.body);
-
-    if (decodedBody is! Map<String, dynamic>) {
-      throw const FormatException('Invalid login response.');
-    }
-
-    return LoginResponse.fromJson(decodedBody);
+    return LoginResponse.fromJson(_decodeMap(response, 'login'));
   }
 
   Future<RefreshTokenResponse> refreshToken(RefreshTokenRequest request) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/refresh-token'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
+    final response = await _post(
+      '/api/identity/refresh-token',
+      request.toJson(),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'Token refresh failed with status ${response.statusCode}: '
-        '${response.body}',
-      );
+    _ensureSuccess(response, 'Your session could not be refreshed.');
+
+    return RefreshTokenResponse.fromJson(_decodeMap(response, 'refresh-token'));
+  }
+
+  /// Revokes the refresh token on the server so a copy of it (device backup,
+  /// stolen phone) stops working. Best-effort: signing out must never fail
+  /// or hang because the network is down.
+  Future<void> logout(String refreshToken) async {
+    try {
+      await _post('/api/identity/logout', {'refreshToken': refreshToken});
+    } catch (_) {
+      // Local sign-out proceeds regardless.
     }
-
-    final decodedBody = jsonDecode(response.body);
-
-    if (decodedBody is! Map<String, dynamic>) {
-      throw const FormatException('Invalid refresh-token response.');
-    }
-
-    return RefreshTokenResponse.fromJson(decodedBody);
   }
 
   Future<ForgotPasswordResponse> forgotPassword(
     ForgotPasswordRequest request,
   ) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/forgot-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
+    final response = await _post(
+      '/api/identity/forgot-password',
+      request.toJson(),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(_extractErrorMessage(response, 'Unable to send reset code.'));
-    }
+    _ensureSuccess(response, 'Unable to send reset code.');
 
-    final decodedBody = jsonDecode(response.body);
-
-    if (decodedBody is! Map<String, dynamic>) {
-      throw const FormatException('Invalid forgot-password response.');
-    }
-
-    return ForgotPasswordResponse.fromJson(decodedBody);
+    return ForgotPasswordResponse.fromJson(
+      _decodeMap(response, 'forgot-password'),
+    );
   }
 
   Future<ResetPasswordResponse> resetPassword(
     ResetPasswordRequest request,
   ) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/identity/reset-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
+    final response = await _post(
+      '/api/identity/reset-password',
+      request.toJson(),
     );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(_extractErrorMessage(response, 'Unable to reset password.'));
-    }
+    _ensureSuccess(response, 'Unable to reset password.');
 
-    final decodedBody = jsonDecode(response.body);
-
-    if (decodedBody is! Map<String, dynamic>) {
-      throw const FormatException('Invalid reset-password response.');
-    }
-
-    return ResetPasswordResponse.fromJson(decodedBody);
+    return ResetPasswordResponse.fromJson(
+      _decodeMap(response, 'reset-password'),
+    );
   }
 
   /// Backend error responses are `{"message": "..."}`; falls back to
@@ -170,8 +155,11 @@ class AuthApiService {
   String _extractErrorMessage(http.Response response, String fallback) {
     try {
       final decoded = jsonDecode(response.body);
-      if (decoded is Map<String, dynamic> && decoded['message'] is String) {
-        return decoded['message'] as String;
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message;
+        }
       }
     } catch (_) {
       // Falls through to the generic message below.

@@ -3,11 +3,13 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../app/routes/route_names.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/password_rules.dart';
 import '../../../../core/theme/app_theme_mode.dart';
 import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/widgets/login_demo_widgets.dart';
 import '../../../auth/data/services/token_storage_service.dart';
+import '../../../auth/data/services/auth_api_service.dart';
 import '../../data/models/profile_response.dart';
 import '../../data/services/profile_api_service.dart';
 import '../../../legal/data/legal_documents.dart';
@@ -69,7 +71,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
 
@@ -182,9 +186,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
 
     if (saved == true && mounted) {
-      ScaffoldMessenger.of(
+      // The server revoked every session when the password changed, so this
+      // device must sign in again with the new one.
+      await _tokenStorageService.clearTokens();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password updated. Please sign in again.'),
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Password updated')));
+        RouteNames.login,
+        (_) => false,
+      );
     }
   }
 
@@ -202,7 +219,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (!RegExp(r'[0-9]').hasMatch(password)) {
       return 'Password must contain a number';
     }
-    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) {
+    if (!hasSpecialCharacter(password)) {
       return 'Password must contain a special character';
     }
     return null;
@@ -210,7 +227,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   void _openLegalDocument(LegalDocument document) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => LegalDocumentScreen(document: document)),
+      MaterialPageRoute(
+        builder: (_) => LegalDocumentScreen(document: document),
+      ),
     );
   }
 
@@ -288,6 +307,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Future<void> _logout() async {
+    final refreshToken = await _tokenStorageService.getRefreshToken();
+
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      final authApi = AuthApiService();
+      await authApi.logout(refreshToken);
+      authApi.dispose();
+    }
+
     await _tokenStorageService.clearTokens();
 
     if (!mounted) return;
@@ -362,9 +389,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       body: LoginDemoBackground(
         child: SafeArea(
           child: _isLoading
-              ? Center(
-                  child: CircularProgressIndicator(color: colors.primary),
-                )
+              ? Center(child: CircularProgressIndicator(color: colors.primary))
               : SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                   child: Center(

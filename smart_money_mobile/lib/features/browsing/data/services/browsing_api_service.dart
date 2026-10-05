@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../../core/network/api_config.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/network_guard.dart';
 import '../models/category.dart';
 import '../models/offer_details.dart';
 import '../models/offer_list_item.dart';
@@ -23,14 +24,16 @@ class BrowsingApiService {
     http.Client? client,
     this.baseUrl = ApiConfig.baseUrl,
     Duration? timeout,
-  })  : _client = client ?? http.Client(),
-        _timeout = timeout ?? const Duration(seconds: 15);
+  }) : _client = client ?? http.Client(),
+       _timeout = timeout ?? kApiTimeout;
 
   final http.Client _client;
   final String baseUrl;
   final Duration _timeout;
 
-  static const Map<String, String> _jsonHeaders = {'Accept': 'application/json'};
+  static const Map<String, String> _jsonHeaders = {
+    'Accept': 'application/json',
+  };
 
   // GET /api/categories
   Future<List<Category>> getCategories() async {
@@ -104,22 +107,10 @@ class BrowsingApiService {
   }
 
   Future<dynamic> _getJson(Uri uri, {String? notFoundMessage}) async {
-    late final http.Response response;
-    try {
-      response = await _client.get(uri, headers: _jsonHeaders).timeout(_timeout);
-    } on TimeoutException {
-      throw const ApiException(
-        'The request timed out. Please check your connection and try again.',
-      );
-    } on http.ClientException {
-      throw const ApiException(
-        'Unable to reach the server. Please check your connection and try again.',
-      );
-    } catch (_) {
-      throw const ApiException(
-        'Something went wrong while contacting the server. Please try again.',
-      );
-    }
+    final http.Response response = await guardNetwork(
+      () => _client.get(uri, headers: _jsonHeaders),
+      timeout: _timeout,
+    );
 
     final status = response.statusCode;
 
@@ -141,20 +132,26 @@ class BrowsingApiService {
     try {
       return jsonDecode(response.body);
     } on FormatException {
-      throw const ApiException('Received an unexpected response from the server.');
+      throw const ApiException(
+        'Received an unexpected response from the server.',
+      );
     }
   }
 
   List<T> _mapList<T>(dynamic body, T Function(Map<String, dynamic>) fromJson) {
     if (body is! List) {
-      throw const ApiException('Received an unexpected response from the server.');
+      throw const ApiException(
+        'Received an unexpected response from the server.',
+      );
     }
     return body.whereType<Map<String, dynamic>>().map(fromJson).toList();
   }
 
   Map<String, dynamic> _asMap(dynamic body) {
     if (body is! Map<String, dynamic>) {
-      throw const ApiException('Received an unexpected response from the server.');
+      throw const ApiException(
+        'Received an unexpected response from the server.',
+      );
     }
     return body;
   }

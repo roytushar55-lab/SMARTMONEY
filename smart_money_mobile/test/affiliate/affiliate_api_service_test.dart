@@ -246,7 +246,7 @@ void main() {
           isA<ApiException>().having(
             (e) => e.message,
             'message',
-            'Unable to reach the server. Please check your connection and try again.',
+            "Can't reach SmartMoney. Check your connection and try again.",
           ),
         ),
       );

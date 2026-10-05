@@ -18,7 +18,9 @@ void main() {
     test('surfaces the real backend message, not a generic one', () async {
       final client = MockClient((request) async {
         return http.Response(
-          jsonEncode({'message': 'Please verify your email address before logging in.'}),
+          jsonEncode({
+            'message': 'Please verify your email address before logging in.',
+          }),
           401,
         );
       });
@@ -65,7 +67,10 @@ void main() {
 
     test('surfaces the backend message on a 400', () async {
       final client = MockClient((request) async {
-        return http.Response(jsonEncode({'message': 'Email format is invalid.'}), 400);
+        return http.Response(
+          jsonEncode({'message': 'Email format is invalid.'}),
+          400,
+        );
       });
       final service = AuthApiService(client: client, baseUrl: _base);
 
@@ -88,7 +93,10 @@ void main() {
       final client = MockClient((request) async {
         captured = request;
         return http.Response(
-          jsonEncode({'email': 'user@test.local', 'message': 'Password has been reset.'}),
+          jsonEncode({
+            'email': 'user@test.local',
+            'message': 'Password has been reset.',
+          }),
           200,
         );
       });
@@ -112,7 +120,10 @@ void main() {
 
     test('surfaces the backend message on an invalid OTP', () async {
       final client = MockClient((request) async {
-        return http.Response(jsonEncode({'message': 'Invalid email or OTP.'}), 400);
+        return http.Response(
+          jsonEncode({'message': 'Invalid email or OTP.'}),
+          400,
+        );
       });
       final service = AuthApiService(client: client, baseUrl: _base);
 
@@ -134,28 +145,31 @@ void main() {
       );
     });
 
-    test('falls back to a generic message when the body has no message field', () async {
-      final client = MockClient((request) async {
-        return http.Response('not json', 500);
-      });
-      final service = AuthApiService(client: client, baseUrl: _base);
+    test(
+      'falls back to a generic message when the body has no message field',
+      () async {
+        final client = MockClient((request) async {
+          return http.Response('not json', 500);
+        });
+        final service = AuthApiService(client: client, baseUrl: _base);
 
-      expect(
-        () => service.resetPassword(
-          const ResetPasswordRequest(
-            email: 'user@test.local',
-            otp: '123456',
-            newPassword: 'NewPassw0rd!',
+        expect(
+          () => service.resetPassword(
+            const ResetPasswordRequest(
+              email: 'user@test.local',
+              otp: '123456',
+              newPassword: 'NewPassw0rd!',
+            ),
           ),
-        ),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('Unable to reset password.'),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Unable to reset password.'),
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   });
 }

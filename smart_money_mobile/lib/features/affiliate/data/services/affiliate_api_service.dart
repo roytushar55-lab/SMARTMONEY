@@ -1,13 +1,13 @@
 // ignore_for_file: prefer_initializing_formals
 
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../../../../core/network/api_config.dart';
 import '../../../../core/network/api_exception.dart';
-import '../../../auth/data/models/refresh_token_request.dart';
+import '../../../../core/network/network_guard.dart';
+import '../../../../core/network/token_refresher.dart';
 import '../../../auth/data/services/auth_api_service.dart';
 import '../../../auth/data/services/token_storage_service.dart';
 import '../models/affiliate_click_response.dart';
@@ -25,11 +25,11 @@ class AffiliateApiService {
     AuthApiService? authApiService,
     this.baseUrl = ApiConfig.baseUrl,
     Duration? timeout,
-  })  : _client = client ?? http.Client(),
-        _tokenStorageService = tokenStorageService,
-        _authApiService = authApiService ?? AuthApiService(baseUrl: baseUrl),
-        _ownsAuthApiService = authApiService == null,
-        _timeout = timeout ?? const Duration(seconds: 15);
+  }) : _client = client ?? http.Client(),
+       _tokenStorageService = tokenStorageService,
+       _authApiService = authApiService ?? AuthApiService(baseUrl: baseUrl),
+       _ownsAuthApiService = authApiService == null,
+       _timeout = timeout ?? kApiTimeout;
 
   final http.Client _client;
   final TokenStorageService _tokenStorageService;
@@ -54,17 +54,14 @@ class AffiliateApiService {
     String? offerId,
   }) async {
     final response = await _sendAuthorizedRequest(
-      (headers) => _client
-          .post(
-            Uri.parse('$baseUrl/api/affiliate/clicks'),
-            headers: headers,
-            body: jsonEncode({
-              'storeId': storeId,
-              if (offerId != null && offerId.trim().isNotEmpty)
-                'offerId': offerId,
-            }),
-          )
-          .timeout(_timeout),
+      (headers) => _client.post(
+        Uri.parse('$baseUrl/api/affiliate/clicks'),
+        headers: headers,
+        body: jsonEncode({
+          'storeId': storeId,
+          if (offerId != null && offerId.trim().isNotEmpty) 'offerId': offerId,
+        }),
+      ),
     );
 
     final status = response.statusCode;
@@ -123,60 +120,31 @@ class AffiliateApiService {
   Future<http.Response> _sendAuthorizedRequest(
     Future<http.Response> Function(Map<String, String> headers) send,
   ) async {
-    late final http.Response response;
-    try {
-      response = await send(await _authorizedHeaders());
+    final response = await guardNetwork(
+      () async => send(await _authorizedHeaders()),
+      timeout: _timeout,
+    );
 
-      if (response.statusCode != 401) {
-        return response;
-      }
-
-      final refreshed = await _refreshAccessToken();
-
-      if (!refreshed) {
-        return response;
-      }
-
-      return await send(await _authorizedHeaders());
-    } on ApiException {
-      rethrow;
-    } on TimeoutException {
-      throw const ApiException(
-        'The request timed out. Please check your connection and try again.',
-      );
-    } on http.ClientException {
-      throw const ApiException(
-        'Unable to reach the server. Please check your connection and try again.',
-      );
-    } catch (_) {
-      throw const ApiException(
-        'Something went wrong while contacting the server. Please try again.',
-      );
-    }
-  }
-
-  Future<bool> _refreshAccessToken() async {
-    final storedRefreshToken = await _tokenStorageService.getRefreshToken();
-
-    if (storedRefreshToken == null || storedRefreshToken.isEmpty) {
-      return false;
+    if (response.statusCode != 401) {
+      return response;
     }
 
-    try {
-      final response = await _authApiService.refreshToken(
-        RefreshTokenRequest(refreshToken: storedRefreshToken),
-      );
+    final outcome = await TokenRefresher.refresh(
+      tokenStorage: _tokenStorageService,
+      authApi: _authApiService,
+    );
 
-      await _tokenStorageService.saveTokens(
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        accessTokenExpiresAt: response.accessTokenExpiresAt,
-      );
-
-      return true;
-    } catch (_) {
-      await _tokenStorageService.clearTokens();
-      return false;
+    switch (outcome) {
+      case RefreshOutcome.refreshed:
+        return guardNetwork(
+          () async => send(await _authorizedHeaders()),
+          timeout: _timeout,
+        );
+      case RefreshOutcome.rejected:
+        // Surfaced as a 401 so createClick reports the session as expired.
+        return response;
+      case RefreshOutcome.transientFailure:
+        throw const ApiException(kNetworkErrorMessage);
     }
   }
 
