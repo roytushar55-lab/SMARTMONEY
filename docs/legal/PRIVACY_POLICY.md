@@ -180,8 +180,6 @@ We may update this Policy from time to time to reflect changes in our practices,
 
 **Business/legal entity name:** SmartMoney (registered trade name: SMART MONEY), a sole proprietorship owned by Rupankar De, registered under Gram Panchayat Trade Registration No. 528 (registered 1 September 2026)
 
-**Registered address:** Kolkata, West Bengal
-
 **Privacy contact email:** admin@smart-money.in
 
 **Grievance Officer:**

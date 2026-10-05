@@ -1,7 +1,7 @@
 # SmartMoney Terms of Service
 
-**Last updated:** 2 October 2026
-**Effective date:** 2 October 2026
+**Last updated:** 5 October 2026
+**Effective date:** 5 October 2026
 
 ## 1. Introduction and Acceptance
 
@@ -13,7 +13,7 @@ You must read these Terms alongside the Privacy Policy, which explains what info
 
 ## 2. Eligibility
 
-You must be **18 years of age or older** to create an account or use the App, consistent with our handling of financial and cashback wallet data. By using the App, you represent that you meet this requirement and that you are legally capable of entering into a binding contract under applicable Indian law. The Service is intended for use within India.
+You must be **18 years of age or older** to create an account or use the App, consistent with our handling of financial and cashback wallet data. By using the App, you represent that you meet this requirement and that you are legally capable of entering into a binding contract under applicable Indian law. The Service is intended for use within India. When you register, you confirm that you are 18 or over and accept these Terms and the Privacy Policy by ticking the confirmation boxes, and we record that confirmation with the version of the documents, the date and time, and your IP address.
 
 ## 3. The SmartMoney Service
 
@@ -81,7 +81,7 @@ Once your SmartMoney wallet has a confirmed, available balance, you may request 
 - We will collect the payout details necessary for your chosen method (UPI ID, or bank account number and IFSC code), and PAN or other tax information where required by applicable law or by Cashfree's own compliance requirements.
 - A minimum withdrawal amount of **₹250** applies: you can request a withdrawal only once your available balance is at least ₹250.
 - We may delay, request additional verification for, or decline a withdrawal where we reasonably suspect fraud, a violation of these Terms, or where required by law or by Cashfree's own risk and compliance checks.
-- Any tax, reporting, or withholding obligations that apply to cashback or withdrawals under Indian law are your responsibility as the recipient, except to the extent SmartMoney is itself legally required to withhold or report, as required by applicable law. [Placeholder — see the note at the top of this document; confirm with your accountant.]
+- Any tax, reporting, or withholding obligations that apply to cashback or withdrawals under Indian law are your responsibility as the recipient, except to the extent SmartMoney is itself legally required to withhold or report, as required by applicable law.
 
 ## 9. Fees
 
@@ -128,7 +128,7 @@ On suspension or termination for a violation of these Terms, any pending or unco
 
 ## 14. Account Closure and Deletion
 
-You may request deletion of your account at any time by contacting us using the details in Section 22, as described in our Privacy Policy. Before we can process a deletion request:
+You can delete your account at any time in the App, by opening your profile, choosing Delete account, and confirming your password, or by contacting us using the details in Section 22, as described in our Privacy Policy. Before we can process a deletion request:
 
 - Any **confirmed but unpaid cashback or wallet balance** must be withdrawn. If your balance is at or above the ₹250 minimum withdrawal amount, we will not process account deletion while it remains; we will help you complete the withdrawal first. If your balance is below ₹250, we will make a one-time exception and pay it out to you when you close your account, subject to the fee sharing described in Section 9. If the balance is too small to cover your share of the payout fee, it cannot be paid out and will be cleared when your account is closed.
 - Any **pending (unconfirmed) cashback** tied to an in-progress merchant transaction may be resolved or forfeited, since it cannot be verified once your account is closed.
@@ -189,8 +189,6 @@ We may update these Terms from time to time to reflect changes in our practices,
 ## 22. Contact Us
 
 **Business/legal entity name:** SmartMoney (registered trade name: SMART MONEY), a sole proprietorship owned by Rupankar De, registered under Gram Panchayat Trade Registration No. 528 (registered 1 September 2026)
-
-**Registered address:** Kolkata, West Bengal
 
 **Contact email:** admin@smart-money.in
 
