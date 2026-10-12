@@ -15,6 +15,8 @@ class AdminCashback {
     required this.createdAt,
     required this.expectedConfirmationDate,
     required this.confirmedDate,
+    this.queue = '',
+    this.isOverdue = false,
   });
 
   final String id;
@@ -31,6 +33,13 @@ class AdminCashback {
   final DateTime createdAt;
   final DateTime expectedConfirmationDate;
   final DateTime? confirmedDate;
+
+  /// The work queue the server put it in (`ReadyToApprove`,
+  /// `ReversalsToDecide`, `NetworkRejected`, `WaitingOnNetwork`, `History`).
+  final String queue;
+
+  /// Undecided and past its expected confirmation date.
+  final bool isOverdue;
 
   /// The pending->available money already moved once; reject would debit
   /// the wrong bucket, so the review queue must offer reverse instead.
@@ -56,6 +65,8 @@ class AdminCashback {
       confirmedDate: json['confirmedDate'] == null
           ? null
           : DateTime.tryParse('${json['confirmedDate']}'),
+      queue: json['queue'] as String? ?? '',
+      isOverdue: json['isOverdue'] as bool? ?? false,
     );
   }
 
@@ -98,6 +109,50 @@ class AdminCashbackPage {
   }
 }
 
+/// Mirrors `AdminCashbackSummaryResponse`: the numbers on top of the page.
+class AdminCashbackSummary {
+  const AdminCashbackSummary({
+    required this.readyToApprove,
+    required this.reversalsToDecide,
+    required this.networkRejected,
+    required this.waitingOnNetwork,
+    required this.history,
+    required this.needsDecision,
+    required this.overdue,
+    required this.exposureAmount,
+  });
+
+  final int readyToApprove;
+  final int reversalsToDecide;
+  final int networkRejected;
+  final int waitingOnNetwork;
+  final int history;
+
+  /// Ready to approve + reversals to decide + network rejected.
+  final int needsDecision;
+
+  /// Undecided and past the expected confirmation date (any queue).
+  final int overdue;
+
+  /// Confirmed cashback the network has not paid us for yet, in rupees.
+  final double exposureAmount;
+
+  factory AdminCashbackSummary.fromJson(Map<String, dynamic> json) {
+    int count(String key) => (json[key] as num?)?.toInt() ?? 0;
+
+    return AdminCashbackSummary(
+      readyToApprove: count('readyToApprove'),
+      reversalsToDecide: count('reversalsToDecide'),
+      networkRejected: count('networkRejected'),
+      waitingOnNetwork: count('waitingOnNetwork'),
+      history: count('history'),
+      needsDecision: count('needsDecision'),
+      overdue: count('overdue'),
+      exposureAmount: AdminCashback._asDouble(json['exposureAmount']),
+    );
+  }
+}
+
 /// Mirrors `CashbackDecisionResponse` — the result of an approve/reject/reverse.
 class CashbackDecision {
   const CashbackDecision({
@@ -118,6 +173,65 @@ class CashbackDecision {
       status: json['status'] as String? ?? '',
       availableBalance: AdminCashback._asDouble(json['availableBalance']),
       pendingBalance: AdminCashback._asDouble(json['pendingBalance']),
+    );
+  }
+}
+
+/// Mirrors `CashbackEventResponse`: one line of a cashback's audit trail.
+class AdminCashbackEvent {
+  const AdminCashbackEvent({
+    required this.id,
+    required this.type,
+    required this.actorName,
+    required this.actorEmail,
+    required this.fromStatus,
+    required this.toStatus,
+    required this.amount,
+    required this.networkStatus,
+    required this.reason,
+    required this.createdAt,
+  });
+
+  final String id;
+
+  /// Created, NetworkStatusChanged, FlaggedForReview, Approved,
+  /// ApprovedByOverride, Rejected or Reversed.
+  final String type;
+
+  /// Null when the network did it, not an admin.
+  final String? actorName;
+  final String? actorEmail;
+  final String? fromStatus;
+  final String toStatus;
+  final double amount;
+
+  /// What the network said about the sale when this happened.
+  final String? networkStatus;
+  final String? reason;
+  final DateTime createdAt;
+
+  /// True when an admin did it (the network has no actor).
+  bool get byAdmin =>
+      (actorName ?? '').trim().isNotEmpty ||
+      (actorEmail ?? '').trim().isNotEmpty;
+
+  factory AdminCashbackEvent.fromJson(Map<String, dynamic> json) {
+    String? text(String key) {
+      final value = json[key] as String?;
+      return value == null || value.trim().isEmpty ? null : value;
+    }
+
+    return AdminCashbackEvent(
+      id: '${json['id']}',
+      type: json['type'] as String? ?? '',
+      actorName: text('actorName'),
+      actorEmail: text('actorEmail'),
+      fromStatus: text('fromStatus'),
+      toStatus: json['toStatus'] as String? ?? '',
+      amount: AdminCashback._asDouble(json['amount']),
+      networkStatus: text('networkStatus'),
+      reason: text('reason'),
+      createdAt: DateTime.tryParse('${json['createdAt']}') ?? DateTime.now(),
     );
   }
 }

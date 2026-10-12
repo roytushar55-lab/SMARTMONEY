@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/auth/admin_session.dart';
@@ -11,10 +12,14 @@ import '../dashboard/screens/dashboard_screen.dart';
 import '../offers/screens/offers_screen.dart';
 import '../stores/screens/stores_screen.dart';
 import '../users/screens/users_screen.dart';
+import '../withdrawals/screens/withdrawals_screen.dart';
+import '../withdrawals/withdrawal_attention_counter.dart';
+import '../withdrawals/withdrawals_filter.dart';
 
 enum _Section {
   dashboard,
   cashbacks,
+  withdrawals,
   categories,
   stores,
   offers,
@@ -39,11 +44,37 @@ class _AdminShellState extends State<AdminShell> {
   /// Set when the dashboard deep-links into the review queue with a filter.
   String? _pendingCashbackStatus;
 
-  void _goTo(_Section section, {String? cashbackStatus}) {
+  /// Set when the dashboard deep-links into the withdrawals list.
+  WithdrawalsFilter? _pendingWithdrawalsFilter;
+
+  /// Drives the badge on the Withdrawals item. Refreshed on every navigation
+  /// and after any withdrawal action, so it is never older than the screen
+  /// beside it; there is no timer.
+  final _attentionCounter = WithdrawalAttentionCounter();
+
+  @override
+  void initState() {
+    super.initState();
+    _attentionCounter.refresh();
+  }
+
+  @override
+  void dispose() {
+    _attentionCounter.dispose();
+    super.dispose();
+  }
+
+  void _goTo(
+    _Section section, {
+    String? cashbackStatus,
+    WithdrawalsFilter? withdrawalsFilter,
+  }) {
     setState(() {
       _section = section;
       _pendingCashbackStatus = cashbackStatus;
+      _pendingWithdrawalsFilter = withdrawalsFilter;
     });
+    _attentionCounter.refresh();
   }
 
   @override
@@ -140,6 +171,12 @@ class _AdminShellState extends State<AdminShell> {
             Icons.receipt_long_outlined,
             _Section.cashbacks,
           ),
+          _navItem(
+            'Withdrawals',
+            Icons.payments_outlined,
+            _Section.withdrawals,
+            badge: _attentionCounter,
+          ),
           _navItem('Categories', Icons.category_outlined, _Section.categories),
           _navItem('Stores', Icons.storefront_outlined, _Section.stores),
           _navItem('Offers', Icons.local_offer_outlined, _Section.offers),
@@ -203,7 +240,14 @@ class _AdminShellState extends State<AdminShell> {
     );
   }
 
-  Widget _navItem(String label, IconData icon, _Section section) {
+  /// [badge], when given, shows its value as a small count at the end of the
+  /// row whenever it is above zero.
+  Widget _navItem(
+    String label,
+    IconData icon,
+    _Section section, {
+    ValueListenable<int?>? badge,
+  }) {
     final selected = _section == section;
 
     return Padding(
@@ -259,6 +303,13 @@ class _AdminShellState extends State<AdminShell> {
                     ),
                   ),
                 ),
+                if (badge != null)
+                  ValueListenableBuilder<int?>(
+                    valueListenable: badge,
+                    builder: (context, count, _) => count == null || count <= 0
+                        ? const SizedBox.shrink()
+                        : _NavBadge(count: count),
+                  ),
               ],
             ),
           ),
@@ -281,11 +332,20 @@ class _AdminShellState extends State<AdminShell> {
         return DashboardScreen(
           onOpenReviewQueue: (status) =>
               _goTo(_Section.cashbacks, cashbackStatus: status),
+          onOpenWithdrawals: (filter) =>
+              _goTo(_Section.withdrawals, withdrawalsFilter: filter),
         );
       case _Section.cashbacks:
         return CashbackReviewScreen(
           key: ValueKey(_pendingCashbackStatus),
           initialStatus: _pendingCashbackStatus,
+        );
+      case _Section.withdrawals:
+        return WithdrawalsScreen(
+          key: ValueKey(_pendingWithdrawalsFilter),
+          initialFilter:
+              _pendingWithdrawalsFilter ?? WithdrawalsFilter.requested,
+          onChanged: _attentionCounter.refresh,
         );
       case _Section.categories:
         return const CategoriesScreen();
@@ -300,5 +360,33 @@ class _AdminShellState extends State<AdminShell> {
       case _Section.users:
         return const UsersScreen();
     }
+  }
+}
+
+/// The count pill on a sidebar item: how many withdrawals need attention.
+class _NavBadge extends StatelessWidget {
+  const _NavBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: AdminSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: AdminColors.danger,
+        borderRadius: BorderRadius.circular(AdminRadius.chip),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          fontFeatures: [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
   }
 }

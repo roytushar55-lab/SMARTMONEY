@@ -12,29 +12,80 @@ import '../../cashbacks/cashback_status_copy.dart';
 import '../../cashbacks/services/admin_cashback_api_service.dart';
 import '../../users/models/admin_user_stats.dart';
 import '../../users/services/admin_user_api_service.dart';
+import '../../withdrawals/services/admin_withdrawal_api_service.dart';
+import '../../withdrawals/withdrawals_filter.dart';
 
-/// Landing screen: a count per cashback status. There's no dedicated
-/// summary endpoint — each card asks the existing list endpoint for
-/// `pageSize=1` and reads `totalCount`, which is cheap and avoids a new
-/// backend route just for this.
+/// Landing screen: a count per cashback status, plus the withdrawals that
+/// need an admin. There's no dedicated summary endpoint — each card asks the
+/// existing list endpoint for `pageSize=1` and reads `totalCount`, which is
+/// cheap and avoids a new backend route just for this.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, required this.onOpenReviewQueue});
+  const DashboardScreen({
+    super.key,
+    required this.onOpenReviewQueue,
+    required this.onOpenWithdrawals,
+    this.cashbackService,
+    this.userService,
+    this.withdrawalService,
+  });
 
   /// Lets a card jump straight to the review queue pre-filtered to its status.
   final void Function(String status) onOpenReviewQueue;
+
+  /// Lets a card open the withdrawals list on the filter it counted.
+  final void Function(WithdrawalsFilter filter) onOpenWithdrawals;
+
+  /// For tests. When null the screen creates, and later disposes, its own.
+  final AdminCashbackApiService? cashbackService;
+  final AdminUserApiService? userService;
+  final AdminWithdrawalApiService? withdrawalService;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
+/// One withdrawals card: the filter it counts and opens, and how it looks.
+class _WithdrawalCard {
+  const _WithdrawalCard(this.filter, this.label, this.icon, this.color);
+
+  final WithdrawalsFilter filter;
+  final String label;
+  final IconData icon;
+  final Color color;
+}
+
 class _DashboardScreenState extends State<DashboardScreen> {
-  final _service = AdminCashbackApiService();
-  final _userService = AdminUserApiService();
+  late final _service = widget.cashbackService ?? AdminCashbackApiService();
+  late final _userService = widget.userService ?? AdminUserApiService();
+  late final _withdrawalService =
+      widget.withdrawalService ?? AdminWithdrawalApiService();
 
   ViewState _state = ViewState.initial;
   String _errorMessage = '';
   final Map<String, int> _counts = {};
+  final Map<WithdrawalsFilter, int> _withdrawalCounts = {};
   AdminUserStats? _userStats;
+
+  static const List<_WithdrawalCard> _withdrawalCards = [
+    _WithdrawalCard(
+      WithdrawalsFilter.needsAttention,
+      'Needs attention',
+      Icons.warning_amber_rounded,
+      AdminColors.danger,
+    ),
+    _WithdrawalCard(
+      WithdrawalsFilter.requested,
+      'Waiting for approval',
+      Icons.hourglass_top_rounded,
+      AdminColors.warning,
+    ),
+    _WithdrawalCard(
+      WithdrawalsFilter.approved,
+      'Approved, not yet paid',
+      Icons.payments_outlined,
+      AdminColors.statusBlue,
+    ),
+  ];
 
   static const Map<String, IconData> _statusIcons = {
     'AwaitingAdminReview': Icons.hourglass_top_rounded,
@@ -53,8 +104,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
-    _service.dispose();
-    _userService.dispose();
+    if (widget.cashbackService == null) _service.dispose();
+    if (widget.userService == null) _userService.dispose();
+    if (widget.withdrawalService == null) _withdrawalService.dispose();
     super.dispose();
   }
 
@@ -70,23 +122,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
       final statsFuture = _userService.getStats();
+      final withdrawalsFuture = Future.wait(
+        _withdrawalCards.map(
+          (card) => _withdrawalService.list(
+            status: card.filter.status,
+            needsAttentionOnly: card.filter.needsAttentionOnly,
+            page: 1,
+            pageSize: 1,
+          ),
+        ),
+      );
 
       final pages = await pagesFuture;
       final userStats = await statsFuture;
+      final withdrawalPages = await withdrawalsFuture;
 
       final counts = <String, int>{};
       for (var i = 0; i < kCashbackStatusFilters.length; i++) {
         counts[kCashbackStatusFilters[i]] = pages[i].totalCount;
       }
+      final withdrawalCounts = <WithdrawalsFilter, int>{};
+      for (var i = 0; i < _withdrawalCards.length; i++) {
+        withdrawalCounts[_withdrawalCards[i].filter] =
+            withdrawalPages[i].totalCount;
+      }
 
+      if (!mounted) return;
       setState(() {
         _counts
           ..clear()
           ..addAll(counts);
+        _withdrawalCounts
+          ..clear()
+          ..addAll(withdrawalCounts);
         _userStats = userStats;
         _state = ViewState.success;
       });
     } on ApiException catch (error) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = error.message;
         _state = ViewState.error;
@@ -103,7 +176,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const AdminPageHeader(
             title: 'Dashboard',
             description:
-                'Cashback pipeline at a glance — tap a card to review.',
+                'Users, cashbacks and withdrawals at a glance — tap a card to '
+                'open it.',
           ),
           const SizedBox(height: AdminSpacing.xxl),
           Expanded(child: _buildBody()),
@@ -192,12 +266,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       return _buildCard(status, _counts[status] ?? 0);
                     },
                   ),
+                  const SizedBox(height: AdminSpacing.xxl),
+                  _buildSectionLabel('Withdrawals'),
+                  const SizedBox(height: AdminSpacing.sm),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      mainAxisSpacing: AdminSpacing.lg,
+                      crossAxisSpacing: AdminSpacing.lg,
+                      childAspectRatio: isMobile ? 1.05 : 1.4,
+                    ),
+                    itemCount: _withdrawalCards.length,
+                    itemBuilder: (context, index) =>
+                        _buildWithdrawalCard(_withdrawalCards[index]),
+                  ),
                 ],
               ),
             );
           },
         );
     }
+  }
+
+  Widget _buildWithdrawalCard(_WithdrawalCard card) {
+    return AdminStatCard(
+      icon: card.icon,
+      value: '${_withdrawalCounts[card.filter] ?? 0}',
+      label: card.label,
+      color: card.color,
+      onTap: () => widget.onOpenWithdrawals(card.filter),
+    );
   }
 
   Widget _buildSectionLabel(String text) {
@@ -285,10 +385,7 @@ class _HeroStatCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(color: labelColor, fontSize: 13),
-              ),
+              Text(label, style: TextStyle(color: labelColor, fontSize: 13)),
             ],
           ),
           if (trend != null) ...[
