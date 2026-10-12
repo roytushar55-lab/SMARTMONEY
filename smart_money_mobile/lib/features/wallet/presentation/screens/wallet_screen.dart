@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/routes/route_names.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/sm_colors.dart';
 import '../../../../core/theme/sm_radius.dart';
@@ -13,8 +14,18 @@ import '../../data/services/wallet_api_service.dart';
 import '../wallet_transaction_copy.dart';
 
 const _monthNames = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 String _formatDate(DateTime date) =>
@@ -23,14 +34,17 @@ String _formatDate(DateTime date) =>
 /// Wallet tab: balance + ledger from `GET /api/wallet` and
 /// `GET /api/wallet/transactions`.
 class WalletScreen extends StatefulWidget {
-  const WalletScreen({super.key});
+  const WalletScreen({super.key, this.service});
+
+  /// For tests. When null the screen creates, and later disposes, its own.
+  final WalletApiService? service;
 
   @override
   State<WalletScreen> createState() => _WalletScreenState();
 }
 
 class _WalletScreenState extends State<WalletScreen> {
-  final WalletApiService _service = WalletApiService();
+  late final WalletApiService _service = widget.service ?? WalletApiService();
 
   ViewState _state = ViewState.initial;
   WalletSummary? _summary;
@@ -46,7 +60,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   void dispose() {
-    _service.dispose();
+    if (widget.service == null) _service.dispose();
     super.dispose();
   }
 
@@ -84,10 +98,17 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature will be available soon.')),
-    );
+  /// The withdraw screen pops with `true` once a withdrawal was requested;
+  /// the balance and the ledger have changed, so load them again.
+  Future<void> _openWithdraw() async {
+    final changed = await Navigator.pushNamed(context, RouteNames.withdraw);
+    if (changed == true && mounted) _load();
+  }
+
+  /// The history pops with `true` if a withdrawal was cancelled there.
+  Future<void> _openHistory() async {
+    final changed = await Navigator.pushNamed(context, RouteNames.withdrawals);
+    if (changed == true && mounted) _load();
   }
 
   @override
@@ -129,8 +150,8 @@ class _WalletScreenState extends State<WalletScreen> {
               const SizedBox(height: SmSpacing.lg),
               _ActionsRow(
                 colors: colors,
-                onWithdraw: () => _showComingSoon('Withdrawals'),
-                onBankAccount: () => _showComingSoon('Bank account setup'),
+                onWithdraw: _openWithdraw,
+                onHistory: _openHistory,
               ),
               const SizedBox(height: SmSpacing.xl),
               _StatsRow(summary: summary, colors: colors),
@@ -146,9 +167,7 @@ class _WalletScreenState extends State<WalletScreen> {
               const SizedBox(height: SmSpacing.md),
               if (_transactions.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: SmSpacing.xxl,
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: SmSpacing.xxl),
                   child: Center(
                     child: Text(
                       'No transactions yet.',
@@ -223,6 +242,32 @@ class _BalanceCard extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
+          // Money set aside for a withdrawal: it has left the balance above,
+          // so say where it went instead of letting it look lost.
+          if (summary.heldBalance > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(
+                  Icons.lock_clock_outlined,
+                  color: Colors.white70,
+                  size: 15,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '₹${summary.heldBalance.toStringAsFixed(2)} on hold for '
+                    'a withdrawal',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -233,12 +278,12 @@ class _ActionsRow extends StatelessWidget {
   const _ActionsRow({
     required this.colors,
     required this.onWithdraw,
-    required this.onBankAccount,
+    required this.onHistory,
   });
 
   final SmColors colors;
   final VoidCallback onWithdraw;
-  final VoidCallback onBankAccount;
+  final VoidCallback onHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -256,9 +301,9 @@ class _ActionsRow extends StatelessWidget {
         Expanded(
           child: _ActionButton(
             colors: colors,
-            icon: Icons.account_balance_outlined,
-            label: 'Bank Account',
-            onTap: onBankAccount,
+            icon: Icons.receipt_long_outlined,
+            label: 'History',
+            onTap: onHistory,
           ),
         ),
       ],
@@ -380,6 +425,23 @@ class _TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = WalletTransactionCopy.forType(transaction.type);
+    final Color tone;
+    final IconData icon;
+    final String sign;
+    switch (copy.direction) {
+      case WalletMoneyDirection.added:
+        tone = colors.success;
+        icon = Icons.arrow_downward_rounded;
+        sign = '+';
+      case WalletMoneyDirection.removed:
+        tone = colors.danger;
+        icon = Icons.arrow_upward_rounded;
+        sign = '-';
+      case WalletMoneyDirection.moved:
+        tone = colors.textSecondary;
+        icon = Icons.check_rounded;
+        sign = '';
+    }
 
     return Container(
       padding: const EdgeInsets.all(SmSpacing.md),
@@ -395,17 +457,10 @@ class _TransactionTile extends StatelessWidget {
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: (copy.isCredit ? colors.success : colors.danger)
-                  .withValues(alpha: 0.12),
+              color: tone.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              copy.isCredit
-                  ? Icons.arrow_downward_rounded
-                  : Icons.arrow_upward_rounded,
-              color: copy.isCredit ? colors.success : colors.danger,
-              size: 18,
-            ),
+            child: Icon(icon, color: tone, size: 18),
           ),
           const SizedBox(width: SmSpacing.md),
           Expanded(
@@ -422,8 +477,7 @@ class _TransactionTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  transaction.description ??
-                      _formatDate(transaction.createdAt),
+                  transaction.description ?? _formatDate(transaction.createdAt),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -436,9 +490,9 @@ class _TransactionTile extends StatelessWidget {
             ),
           ),
           Text(
-            '${copy.isCredit ? '+' : '-'}₹${transaction.amount.toStringAsFixed(2)}',
+            '$sign₹${transaction.amount.toStringAsFixed(2)}',
             style: TextStyle(
-              color: copy.isCredit ? colors.success : colors.danger,
+              color: tone,
               fontSize: 14,
               fontWeight: FontWeight.w800,
             ),

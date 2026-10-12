@@ -1,47 +1,76 @@
-/// Friendly label + credit/debit direction for a [WalletTransaction.type]
-/// raw value (backend `WalletTransactionType`: CashbackPending,
-/// CashbackConfirmed, CashbackRejected, CashbackReversed — M5 will add
-/// withdrawal entries). Unknown/future values fall back to a neutral entry
-/// rather than crashing.
+/// Which way the money went, as the user should read it.
+enum WalletMoneyDirection {
+  /// Money came into the spendable balance (shown as +, green).
+  added,
+
+  /// Money left the spendable balance (shown as -, red).
+  removed,
+
+  /// A bookkeeping entry that changed no spendable money, such as a payout
+  /// leaving the on-hold bucket (shown without a sign, neutral).
+  moved,
+}
+
+/// Friendly label + money direction for a [WalletTransaction.type] raw value
+/// (backend `WalletTransactionType`: CashbackPending, CashbackConfirmed,
+/// CashbackRejected, CashbackReversed, WithdrawalRequested,
+/// WithdrawalCompleted, WithdrawalReleased). Unknown/future values fall back
+/// to a neutral entry rather than crashing or claiming money was added.
 class WalletTransactionCopy {
-  const WalletTransactionCopy({required this.label, required this.isCredit});
+  const WalletTransactionCopy({required this.label, required this.direction});
 
   final String label;
+  final WalletMoneyDirection direction;
 
-  /// true = money added (shown as +), false = money removed (shown as -).
-  final bool isCredit;
+  bool get isCredit => direction == WalletMoneyDirection.added;
+  bool get isDebit => direction == WalletMoneyDirection.removed;
 
   factory WalletTransactionCopy.forType(String rawType) {
     switch (rawType) {
       case 'CashbackPending':
         return const WalletTransactionCopy(
           label: 'Cashback pending',
-          isCredit: true,
+          direction: WalletMoneyDirection.added,
         );
       case 'CashbackConfirmed':
         return const WalletTransactionCopy(
           label: 'Cashback confirmed',
-          isCredit: true,
+          direction: WalletMoneyDirection.added,
         );
       case 'CashbackRejected':
         return const WalletTransactionCopy(
           label: 'Cashback rejected',
-          isCredit: false,
+          direction: WalletMoneyDirection.removed,
         );
       case 'CashbackReversed':
         return const WalletTransactionCopy(
           label: 'Cashback reversed',
-          isCredit: false,
+          direction: WalletMoneyDirection.removed,
         );
-      case 'Withdrawal':
+      // Available -> on hold: the user's spendable money went down.
+      case 'WithdrawalRequested':
         return const WalletTransactionCopy(
-          label: 'Withdrawal',
-          isCredit: false,
+          label: 'Withdrawal requested',
+          direction: WalletMoneyDirection.removed,
+        );
+      // On hold -> paid out: spendable money already went down when it was
+      // requested, so showing another minus would count it twice.
+      case 'WithdrawalCompleted':
+        return const WalletTransactionCopy(
+          label: 'Withdrawal paid',
+          direction: WalletMoneyDirection.moved,
+        );
+      // On hold -> available: the withdrawal failed, was declined or was
+      // cancelled, and the money is spendable again.
+      case 'WithdrawalReleased':
+        return const WalletTransactionCopy(
+          label: 'Withdrawal returned',
+          direction: WalletMoneyDirection.added,
         );
       default:
         return const WalletTransactionCopy(
           label: 'Wallet update',
-          isCredit: true,
+          direction: WalletMoneyDirection.moved,
         );
     }
   }

@@ -20,4 +20,14 @@ class RouteNames {
   static const offerDetails = '/offer-details';
 
   static const cashbackDetails = '/cashback-details';
+
+  /// Pops with `true` when a withdrawal was requested, so the wallet reloads.
+  static const withdraw = '/withdraw';
+
+  /// The user's withdrawal history. Pops with `true` if one was cancelled.
+  static const withdrawals = '/withdrawals';
+
+  /// One withdrawal (argument: a `Withdrawal`). Pops with `true` if it was
+  /// cancelled.
+  static const withdrawalDetails = '/withdrawal-details';
 }

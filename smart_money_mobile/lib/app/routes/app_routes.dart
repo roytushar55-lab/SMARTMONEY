@@ -15,6 +15,10 @@ import '../../features/cashback/data/models/cashback_item.dart';
 import '../../features/cashback/presentation/screens/cashback_details_screen.dart';
 import '../../features/shell/presentation/screens/main_shell.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../../features/withdrawals/data/models/withdrawal.dart';
+import '../../features/withdrawals/presentation/screens/withdraw_screen.dart';
+import '../../features/withdrawals/presentation/screens/withdrawal_details_screen.dart';
+import '../../features/withdrawals/presentation/screens/withdrawals_screen.dart';
 import 'route_names.dart';
 import '../../features/profile/presentation/screens/profile_setup_screen.dart';
 
@@ -102,6 +106,23 @@ class AppRoutes {
           builder: (_) => CashbackDetailsScreen(item: item),
         );
 
+      case RouteNames.withdraw:
+        return MaterialPageRoute<bool>(builder: (_) => const WithdrawScreen());
+
+      case RouteNames.withdrawals:
+        return MaterialPageRoute<bool>(
+          builder: (_) => const WithdrawalsScreen(),
+        );
+
+      case RouteNames.withdrawalDetails:
+        final withdrawal = settings.arguments;
+        if (withdrawal is! Withdrawal) {
+          return _invalidArgumentsRoute(settings.name);
+        }
+        return MaterialPageRoute<bool>(
+          builder: (_) => WithdrawalDetailsScreen(withdrawal: withdrawal),
+        );
+
       default:
         return MaterialPageRoute(
           builder: (_) =>
@@ -114,9 +135,7 @@ class AppRoutes {
     return MaterialPageRoute(
       builder: (_) => Scaffold(
         appBar: AppBar(),
-        body: Center(
-          child: Text('Unable to open "${routeName ?? 'screen'}".'),
-        ),
+        body: Center(child: Text('Unable to open "${routeName ?? 'screen'}".')),
       ),
     );
   }

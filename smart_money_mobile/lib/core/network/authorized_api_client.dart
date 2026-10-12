@@ -49,6 +49,13 @@ class AuthorizedApiClient {
     );
   }
 
+  /// POSTs JSON and decodes a JSON object reply. A non-2xx reply becomes an
+  /// [ApiException] carrying the server's `message` when it sent one.
+  Future<Map<String, dynamic>> postJson(String path, {Object? body}) async {
+    final response = await post(path, body: body);
+    return _decodeMap(response);
+  }
+
   Future<http.Response> post(String path, {Object? body}) {
     return sendAuthorizedRequest(
       (headers) => _client.post(
