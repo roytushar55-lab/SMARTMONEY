@@ -11,7 +11,9 @@ public sealed class ApproveCashbackHandlerTests
     private readonly Mock<ICashbackRepository> _cashbacks = new();
     private readonly Mock<IWalletRepository> _wallets = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactions = new();
+    private readonly Mock<ICashbackEventRepository> _events = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Guid _reviewerId = Guid.NewGuid();
 
     private readonly Guid _userId = Guid.NewGuid();
     private readonly Wallet _wallet;
@@ -30,13 +32,19 @@ public sealed class ApproveCashbackHandlerTests
             _cashbacks.Object,
             _wallets.Object,
             _walletTransactions.Object,
+            _events.Object,
             _unitOfWork.Object);
     }
 
-    private Cashback NewCashback(decimal amount = 150.00m)
+    private Cashback NewCashback(decimal amount = 150.00m, string? networkStatus = "validated")
     {
         var cashback = new Cashback(
             _userId, _wallet.Id, Guid.NewGuid(), amount, DateTime.UtcNow.AddDays(60));
+
+        // The conversion rides along on a loaded cashback; approval is only
+        // allowed once the network says validated, so these tests carry that.
+        typeof(Cashback).GetProperty(nameof(Cashback.AffiliateConversion))!
+            .SetValue(cashback, new AffiliateConversion { NetworkStatus = networkStatus ?? string.Empty });
 
         _cashbacks.Setup(c => c.GetByIdAsync(cashback.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(cashback);
@@ -55,7 +63,7 @@ public sealed class ApproveCashbackHandlerTests
             .Callback<WalletTransaction, CancellationToken>((tx, _) => entry = tx);
 
         var response = await CreateHandler().HandleAsync(
-            new ApproveCashbackCommand(cashback.Id), CancellationToken.None);
+            new ApproveCashbackCommand(cashback.Id, _reviewerId), CancellationToken.None);
 
         Assert.NotNull(response);
         Assert.Equal("Confirmed", response!.Status);
@@ -80,7 +88,7 @@ public sealed class ApproveCashbackHandlerTests
         _wallet.AddPendingCashback(150.00m);
 
         var response = await CreateHandler().HandleAsync(
-            new ApproveCashbackCommand(cashback.Id), CancellationToken.None);
+            new ApproveCashbackCommand(cashback.Id, _reviewerId), CancellationToken.None);
 
         Assert.NotNull(response);
         Assert.Equal(150.00m, _wallet.AvailableBalance);
@@ -99,7 +107,7 @@ public sealed class ApproveCashbackHandlerTests
         cashback.FlagForReview();
 
         var response = await CreateHandler().HandleAsync(
-            new ApproveCashbackCommand(cashback.Id), CancellationToken.None);
+            new ApproveCashbackCommand(cashback.Id, _reviewerId), CancellationToken.None);
 
         Assert.NotNull(response);
         Assert.Equal(CashbackStatus.Confirmed, cashback.Status);
@@ -117,7 +125,7 @@ public sealed class ApproveCashbackHandlerTests
     public async Task UnknownCashback_ReturnsNull()
     {
         var response = await CreateHandler().HandleAsync(
-            new ApproveCashbackCommand(Guid.NewGuid()), CancellationToken.None);
+            new ApproveCashbackCommand(Guid.NewGuid(), _reviewerId), CancellationToken.None);
 
         Assert.Null(response);
         _unitOfWork.Verify(
@@ -132,7 +140,7 @@ public sealed class ApproveCashbackHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(
-                new ApproveCashbackCommand(cashback.Id), CancellationToken.None));
+                new ApproveCashbackCommand(cashback.Id, _reviewerId), CancellationToken.None));
 
         _unitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -151,7 +159,7 @@ public sealed class ApproveCashbackHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(
-                new ApproveCashbackCommand(cashback.Id), CancellationToken.None));
+                new ApproveCashbackCommand(cashback.Id, _reviewerId), CancellationToken.None));
 
         _unitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

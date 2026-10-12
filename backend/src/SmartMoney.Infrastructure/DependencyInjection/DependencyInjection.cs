@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,10 +11,13 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SmartMoney.Application.Abstractions.Affiliate;
 using SmartMoney.Application.Abstractions.Authentication;
+using SmartMoney.Application.Abstractions.Payouts;
 using SmartMoney.Application.Abstractions.Persistence;
+using SmartMoney.Application.Common;
 using SmartMoney.Domain.Enums;
 using SmartMoney.Infrastructure.Affiliate;
 using SmartMoney.Infrastructure.Authentication;
+using SmartMoney.Infrastructure.Payouts;
 using SmartMoney.Infrastructure.Persistence.Context;
 using SmartMoney.Infrastructure.Persistence.Repositories;
 
@@ -52,6 +57,8 @@ public static class DependencyInjection
         services.AddScoped<INetworkCashbackSettingsRepository, NetworkCashbackSettingsRepository>();
         services.AddScoped<ICashbackRateOverrideRepository, CashbackRateOverrideRepository>();
         services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
+        services.AddScoped<ICashbackEventRepository, CashbackEventRepository>();
+        services.AddScoped<IWithdrawalRepository, WithdrawalRepository>();
 
         services.AddScoped<IUnitOfWork>(serviceProvider =>
             serviceProvider.GetRequiredService<SmartMoneyDbContext>());
@@ -119,6 +126,65 @@ public static class DependencyInjection
 
 
 
+
+        // Payouts. Settings are validated at startup (unknown provider, Fake
+        // outside Development, bad fees, missing key ring) so a mistake shows
+        // up on deploy, not on a user's first withdrawal.
+        services.AddSingleton<IValidateOptions<PayoutOptions>, PayoutStartupValidator>();
+        services.AddOptions<PayoutOptions>()
+            .Bind(configuration.GetSection(PayoutOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton(serviceProvider =>
+            serviceProvider.GetRequiredService<IOptions<PayoutOptions>>().Value);
+        services.AddSingleton<PayoutPolicy>();
+        services.Configure<FakePayoutOptions>(
+            configuration.GetSection(FakePayoutOptions.SectionName));
+
+        // The active provider is chosen by Payouts:Provider from the catalog
+        // in PayoutProviders (the one place a new vendor is registered).
+        services.AddSingleton<IPayoutProvider>(serviceProvider =>
+            PayoutProviders.Catalog[
+                    serviceProvider.GetRequiredService<PayoutOptions>().Provider]
+                .Create(serviceProvider));
+
+        // Bank details are encrypted at rest. The key ring must persist across
+        // deploys: set DataProtection:KeysPath (a folder) outside Development.
+        IDataProtectionBuilder dataProtection = services
+            .AddDataProtection()
+            .SetApplicationName("SmartMoney");
+
+        string? keysPath = configuration["DataProtection:KeysPath"];
+
+        if (!string.IsNullOrWhiteSpace(keysPath))
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        }
+
+        // The key files are plain XML unless protected: anyone who can read the
+        // folder (or a backup of it) could otherwise decrypt stored bank
+        // details. PayoutStartupValidator requires one of these outside
+        // Development.
+        string? certificatePath = configuration["DataProtection:CertificatePath"];
+
+        if (!string.IsNullOrWhiteSpace(certificatePath))
+        {
+            // A missing file or wrong password stops the app at startup.
+            dataProtection.ProtectKeysWithCertificate(
+                X509CertificateLoader.LoadPkcs12FromFile(
+                    certificatePath,
+                    configuration["DataProtection:CertificatePassword"]));
+        }
+        else if (configuration.GetValue<bool>("DataProtection:UseDpapi"))
+        {
+            // Windows only; the keys can only be read by the same machine/account.
+            dataProtection.ProtectKeysWithDpapi();
+        }
+
+        services.AddSingleton<IPayoutDestinationProtector,
+            DataProtectionPayoutDestinationProtector>();
+
+        // Retries and reconciles automatic payouts; idle for the manual provider.
+        services.AddHostedService<WithdrawalWorker>();
 
         // Read JWT settings
         JwtOptions jwtOptions =

@@ -30,11 +30,11 @@ public sealed class ListCashbacksQueryHandler
             ? DefaultPageSize
             : Math.Min(query.PageSize, MaxPageSize);
 
-        var cashbacks = await _cashbackRepository.ListByStatusAsync(
-            query.Status, page, pageSize, cancellationToken);
+        var cashbacks = await _cashbackRepository.ListAsync(
+            query.Filter, page, pageSize, cancellationToken);
 
-        var totalCount = await _cashbackRepository.CountByStatusAsync(
-            query.Status, cancellationToken);
+        var totalCount = await _cashbackRepository.CountAsync(
+            query.Filter, cancellationToken);
 
         var items = cashbacks
             .Select(cashback => new AdminCashbackListItemResponse
@@ -46,6 +46,8 @@ public sealed class ListCashbacksQueryHandler
                 StoreName = cashback.AffiliateConversion.AffiliateClick?.Store?.Name,
                 CashbackAmount = cashback.CashbackAmount,
                 Status = cashback.Status.ToString(),
+                Queue = CashbackQueues.Classify(cashback).ToString(),
+                IsOverdue = CashbackQueues.IsOverdue(cashback, query.Filter.NowUtc),
                 NetworkStatus = cashback.AffiliateConversion.NetworkStatus,
                 OrderAmount = cashback.AffiliateConversion.OrderAmount,
                 CommissionAmount = cashback.AffiliateConversion.CommissionAmount,

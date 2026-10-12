@@ -76,6 +76,9 @@ public sealed class IngestAffiliateConversionCommandHandler
             };
         }
 
+        // What the network said last time, for the cashback audit trail.
+        string? previousNetworkStatus = isNew ? null : conversion.NetworkStatus;
+
         // Snapshot fields: the provider's latest report is authoritative,
         // including explicit nulls (e.g. an amount removed on reversal).
         // A staleness guard on NetworkUpdatedAt (skip out-of-order postbacks)
@@ -127,7 +130,8 @@ public sealed class IngestAffiliateConversionCommandHandler
 
         // Before SaveChanges so the cashback creation/transition commits
         // atomically with the conversion it derives from.
-        await _cashbackProcessor.ProcessAsync(conversion, cancellationToken);
+        await _cashbackProcessor.ProcessAsync(
+            conversion, cancellationToken, previousNetworkStatus);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

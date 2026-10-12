@@ -25,8 +25,11 @@ public class WalletTransaction : BaseEntity
     /// </summary>
     public decimal Amount { get; private set; }
 
-    /// <summary>Null for non-cashback entries (M5 withdrawals).</summary>
+    /// <summary>Null for non-cashback entries (for example withdrawals).</summary>
     public Guid? CashbackId { get; private set; }
+
+    /// <summary>Set on withdrawal entries; null otherwise.</summary>
+    public Guid? WithdrawalId { get; private set; }
 
     public string? Description { get; private set; }
 
@@ -36,11 +39,16 @@ public class WalletTransaction : BaseEntity
     /// <summary>Wallet's PendingBalance after this mutation.</summary>
     public decimal PendingBalanceAfter { get; private set; }
 
+    /// <summary>Wallet's HeldBalance (money reserved for open withdrawals) after this mutation.</summary>
+    public decimal HeldBalanceAfter { get; private set; }
+
     public Wallet Wallet { get; private set; } = null!;
 
     public User User { get; private set; } = null!;
 
     public Cashback? Cashback { get; private set; }
+
+    public Withdrawal? Withdrawal { get; private set; }
 
     private WalletTransaction()
     {
@@ -54,7 +62,9 @@ public class WalletTransaction : BaseEntity
         Guid? cashbackId,
         string? description,
         decimal availableBalanceAfter,
-        decimal pendingBalanceAfter)
+        decimal pendingBalanceAfter,
+        decimal heldBalanceAfter = 0m,
+        Guid? withdrawalId = null)
     {
         if (amount <= 0)
             throw new ArgumentException("Amount must be greater than zero.");
@@ -67,5 +77,7 @@ public class WalletTransaction : BaseEntity
         Description = description;
         AvailableBalanceAfter = availableBalanceAfter;
         PendingBalanceAfter = pendingBalanceAfter;
+        HeldBalanceAfter = heldBalanceAfter;
+        WithdrawalId = withdrawalId;
     }
 }

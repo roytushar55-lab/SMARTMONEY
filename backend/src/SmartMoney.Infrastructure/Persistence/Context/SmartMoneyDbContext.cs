@@ -57,6 +57,10 @@ public sealed class SmartMoneyDbContext : DbContext, IUnitOfWork
 
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
 
+    public DbSet<CashbackEvent> CashbackEvents => Set<CashbackEvent>();
+
+    public DbSet<Withdrawal> Withdrawals => Set<Withdrawal>();
+
     /// <summary>
     /// Turns a lost optimistic-concurrency race (Wallets and Cashbacks carry a
     /// row-version token) into a domain exception the API can map to 409.

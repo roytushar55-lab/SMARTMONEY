@@ -97,6 +97,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // server down. Limits are per client IP and configurable.
 int authPerMinute = builder.Configuration.GetValue("RateLimiting:AuthRequestsPerMinute", 20);
 int otpPerTenMinutes = builder.Configuration.GetValue("RateLimiting:OtpRequestsPerTenMinutes", 10);
+int withdrawalPerTenMinutes = builder.Configuration.GetValue("RateLimiting:WithdrawalRequestsPerTenMinutes", 10);
 
 static string ClientKey(HttpContext context) =>
     context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -147,6 +148,18 @@ builder.Services.AddRateLimiter(options =>
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = otpPerTenMinutes,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0
+            }));
+
+    // Requesting a withdrawal re-checks the password, so it must not be a
+    // password-guessing oracle for someone holding a stolen session.
+    options.AddPolicy("withdrawal", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = withdrawalPerTenMinutes,
                 Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0
             }));

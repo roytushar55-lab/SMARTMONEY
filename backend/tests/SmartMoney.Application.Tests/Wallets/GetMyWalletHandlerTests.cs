@@ -47,5 +47,24 @@ public sealed class GetMyWalletHandlerTests
         Assert.Equal(50.00m, response.PendingBalance);
         Assert.Equal(150.00m, response.TotalEarned);
         Assert.Equal(50.00m, response.TotalWithdrawn);
+        Assert.Equal(0m, response.HeldBalance);
+    }
+
+    [Fact]
+    public async Task HeldBalance_IsReportedSeparatelyFromAvailable()
+    {
+        var userId = Guid.NewGuid();
+        var wallet = new Wallet(userId);
+        wallet.AddPendingCashback(500.00m);
+        wallet.ApproveCashback(500.00m);
+        wallet.HoldForWithdrawal(300.00m);
+        _wallets.Setup(w => w.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(wallet);
+
+        var response = await CreateHandler().HandleAsync(
+            new GetMyWalletQuery(userId), CancellationToken.None);
+
+        Assert.Equal(200.00m, response.AvailableBalance);
+        Assert.Equal(300.00m, response.HeldBalance);
     }
 }

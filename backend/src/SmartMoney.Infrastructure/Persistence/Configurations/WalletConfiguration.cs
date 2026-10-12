@@ -14,7 +14,8 @@ public sealed class WalletConfiguration : IEntityTypeConfiguration<Wallet>
             // with negative money, whatever a handler does.
             table.HasCheckConstraint(
                 "CK_Wallets_BalancesNonNegative",
-                "\"AvailableBalance\" >= 0 AND \"PendingBalance\" >= 0");
+                "\"AvailableBalance\" >= 0 AND \"PendingBalance\" >= 0 " +
+                "AND \"HeldBalance\" >= 0");
         });
 
         // Postgres xmin as an optimistic-concurrency token: two requests that
@@ -31,6 +32,9 @@ public sealed class WalletConfiguration : IEntityTypeConfiguration<Wallet>
             .HasPrecision(18, 2);
 
         builder.Property(x => x.PendingBalance)
+            .HasPrecision(18, 2);
+
+        builder.Property(x => x.HeldBalance)
             .HasPrecision(18, 2);
 
         builder.Property(x => x.TotalEarned)

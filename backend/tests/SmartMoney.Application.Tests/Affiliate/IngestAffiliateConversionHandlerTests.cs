@@ -39,7 +39,7 @@ public sealed class IngestAffiliateConversionHandlerTests
     {
         var processor = new ConversionCashbackProcessor(
             _cashbacks.Object, _rateResolver.Object, _stores.Object, _wallets.Object,
-            _clicks.Object, _walletTransactions.Object, _users.Object);
+            _clicks.Object, _walletTransactions.Object, _users.Object, new Mock<ICashbackEventRepository>().Object);
 
         return new IngestAffiliateConversionCommandHandler(
             new IngestAffiliateConversionValidator(),

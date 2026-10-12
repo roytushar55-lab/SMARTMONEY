@@ -83,6 +83,15 @@ public sealed class DeleteAccountCommandHandler
             user.Id,
             cancellationToken);
 
+        // Money reserved for an open withdrawal is still the user's: deleting
+        // now would orphan it. Wait for the withdrawal to finish.
+        if (wallet is not null && wallet.HeldBalance > 0)
+        {
+            throw new InvalidOperationException(
+                "A withdrawal is still in progress. Please wait until it " +
+                "finishes before deleting your account.");
+        }
+
         if (wallet is not null && wallet.AvailableBalance > 0)
         {
             throw new InvalidOperationException(
@@ -115,7 +124,8 @@ public sealed class DeleteAccountCommandHandler
                         cashback.Id,
                         "Cashback forfeited on account deletion.",
                         wallet.AvailableBalance,
-                        wallet.PendingBalance),
+                        wallet.PendingBalance,
+                        wallet.HeldBalance),
                     cancellationToken);
             }
         }

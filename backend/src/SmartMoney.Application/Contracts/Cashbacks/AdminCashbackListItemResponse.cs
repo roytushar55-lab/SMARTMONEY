@@ -16,6 +16,12 @@ public sealed class AdminCashbackListItemResponse
 
     public string Status { get; set; } = string.Empty;
 
+    /// <summary>The work queue it is in: ReadyToApprove, ReversalsToDecide, NetworkRejected, WaitingOnNetwork or History.</summary>
+    public string Queue { get; set; } = string.Empty;
+
+    /// <summary>Undecided and past its expected confirmation date.</summary>
+    public bool IsOverdue { get; set; }
+
     public string NetworkStatus { get; set; } = string.Empty;
 
     public decimal? OrderAmount { get; set; }

@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using SmartMoney.Application.Features.Cashbacks.ListCashbacks;
 using SmartMoney.Domain.Entities;
 using SmartMoney.Domain.Enums;
 
@@ -26,16 +28,21 @@ public interface ICashbackRepository
     /// <summary>
     /// Admin review listing. Read-only; includes User and the conversion →
     /// click → store chain so the admin sees who earned it, from where, and
-    /// the network's reported status. Null status lists all. Newest first.
+    /// the network's reported status. An empty filter lists all. Newest first.
     /// </summary>
-    Task<IReadOnlyList<Cashback>> ListByStatusAsync(
-        CashbackStatus? status,
+    Task<IReadOnlyList<Cashback>> ListAsync(
+        CashbackListFilter filter,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
 
-    Task<int> CountByStatusAsync(
-        CashbackStatus? status,
+    Task<int> CountAsync(
+        CashbackListFilter filter,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Total cashback amount of the cashbacks that match the rule.</summary>
+    Task<decimal> SumAmountAsync(
+        Expression<Func<Cashback, bool>> predicate,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -16,17 +16,20 @@ public sealed class ApproveCashbackCommandHandler
     private readonly ICashbackRepository _cashbackRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IWalletTransactionRepository _walletTransactionRepository;
+    private readonly ICashbackEventRepository _eventRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public ApproveCashbackCommandHandler(
         ICashbackRepository cashbackRepository,
         IWalletRepository walletRepository,
         IWalletTransactionRepository walletTransactionRepository,
+        ICashbackEventRepository eventRepository,
         IUnitOfWork unitOfWork)
     {
         _cashbackRepository = cashbackRepository;
         _walletRepository = walletRepository;
         _walletTransactionRepository = walletTransactionRepository;
+        _eventRepository = eventRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -49,7 +52,47 @@ public sealed class ApproveCashbackCommandHandler
         // the wallet a second time.
         bool wasPreviouslyConfirmed = cashback.ConfirmedDate is not null;
 
+        var statusBefore = cashback.Status;
+
+        // Only a cashback an admin may decide on is held to the network rule;
+        // any other state gets the domain's own refusal from Confirm() below.
+        bool isOverride = false;
+
+        if (statusBefore is CashbackStatus.Pending or CashbackStatus.AwaitingAdminReview)
+        {
+            string? refusal = CashbackApprovalPolicy.Refusal(
+                cashback.AffiliateConversion?.NetworkStatus);
+
+            if (refusal is not null)
+            {
+                if (!command.Override)
+                {
+                    throw new InvalidOperationException(refusal);
+                }
+
+                if (string.IsNullOrWhiteSpace(command.Reason))
+                {
+                    throw new ArgumentException(
+                        "Approving against the network's status needs a reason.");
+                }
+
+                isOverride = true;
+            }
+        }
+
         cashback.Confirm();
+
+        await _eventRepository.AddAsync(
+            new CashbackEvent(
+                cashback.Id,
+                isOverride ? CashbackEventType.ApprovedByOverride : CashbackEventType.Approved,
+                command.ReviewerId,
+                statusBefore,
+                cashback.Status,
+                cashback.CashbackAmount,
+                cashback.AffiliateConversion?.NetworkStatus,
+                command.Reason),
+            cancellationToken);
 
         var wallet = await _walletRepository.GetByIdAsync(
             cashback.WalletId, cancellationToken);
@@ -73,7 +116,8 @@ public sealed class ApproveCashbackCommandHandler
                     cashback.Id,
                     "Cashback confirmed by admin.",
                     wallet.AvailableBalance,
-                    wallet.PendingBalance),
+                    wallet.PendingBalance,
+                    wallet.HeldBalance),
                 cancellationToken);
         }
 

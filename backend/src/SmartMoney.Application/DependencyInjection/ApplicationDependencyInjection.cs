@@ -30,6 +30,8 @@ using SmartMoney.Application.Features.AffiliateNetworks.UpdateAffiliateNetwork;
 using SmartMoney.Application.Features.Cashbacks;
 using SmartMoney.Application.Features.Cashbacks.ApproveCashback;
 using SmartMoney.Application.Features.Cashbacks.GetMyCashbacks;
+using SmartMoney.Application.Features.Cashbacks.GetCashbackEvents;
+using SmartMoney.Application.Features.Cashbacks.GetCashbackSummary;
 using SmartMoney.Application.Features.Cashbacks.ListCashbacks;
 using SmartMoney.Application.Features.Cashbacks.RejectCashback;
 using SmartMoney.Application.Features.Cashbacks.ReverseCashback;
@@ -75,6 +77,22 @@ using SmartMoney.Application.Features.Stores.UpdateStore;
 using SmartMoney.Application.Features.StoreAffiliateMappings.CreateStoreAffiliateMapping;
 using SmartMoney.Application.Features.StoreAffiliateMappings.ListStoreAffiliateMappingsAdmin;
 using SmartMoney.Application.Features.StoreAffiliateMappings.UpdateStoreAffiliateMapping;
+using SmartMoney.Application.Contracts.Withdrawals;
+using SmartMoney.Application.Features.Withdrawals;
+using SmartMoney.Application.Features.Withdrawals.AcknowledgeWithdrawal;
+using SmartMoney.Application.Features.Withdrawals.ApproveWithdrawal;
+using SmartMoney.Application.Features.Withdrawals.GetAdminWithdrawal;
+using SmartMoney.Application.Features.Withdrawals.GetAdminWithdrawalSummary;
+using SmartMoney.Application.Features.Withdrawals.ListAdminWithdrawals;
+using SmartMoney.Application.Features.Withdrawals.MarkWithdrawalFailed;
+using SmartMoney.Application.Features.Withdrawals.MarkWithdrawalPaid;
+using SmartMoney.Application.Features.Withdrawals.ProcessPayoutWebhook;
+using SmartMoney.Application.Features.Withdrawals.RejectWithdrawal;
+using SmartMoney.Application.Features.Withdrawals.CancelWithdrawal;
+using SmartMoney.Application.Features.Withdrawals.GetMyWithdrawal;
+using SmartMoney.Application.Features.Withdrawals.GetMyWithdrawals;
+using SmartMoney.Application.Features.Withdrawals.PreviewWithdrawal;
+using SmartMoney.Application.Features.Withdrawals.RequestWithdrawal;
 using SmartMoney.Application.Features.Wallets.GetMyWallet;
 using SmartMoney.Application.Features.Wallets.GetMyWalletTransactions;
 
@@ -141,11 +159,14 @@ public static class ApplicationDependencyInjection
 
         services.AddScoped<IQueryHandler<ListCashbacksQuery,AdminCashbackListResponse>,ListCashbacksQueryHandler>();
 
+        services.AddScoped<IQueryHandler<GetCashbackSummaryQuery,AdminCashbackSummaryResponse>,GetCashbackSummaryQueryHandler>();
+
         services.AddScoped<ICommandHandler<ApproveCashbackCommand,CashbackDecisionResponse?>,ApproveCashbackCommandHandler>();
 
         services.AddScoped<ICommandHandler<RejectCashbackCommand,CashbackDecisionResponse?>,RejectCashbackCommandHandler>();
 
         services.AddScoped<ICommandHandler<ReverseCashbackCommand,CashbackDecisionResponse?>,ReverseCashbackCommandHandler>();
+        services.AddScoped<IQueryHandler<GetCashbackEventsQuery,IReadOnlyList<CashbackEventResponse>?>,GetCashbackEventsQueryHandler>();
 
         services.AddScoped<ChangeUserRoleValidator>();
 
@@ -164,6 +185,26 @@ public static class ApplicationDependencyInjection
         services.AddScoped<IQueryHandler<GetUserStatsQuery,AdminUserStatsResponse>,GetUserStatsQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetMyWalletQuery,MyWalletResponse>,GetMyWalletQueryHandler>();
+
+        // Withdrawals
+        services.AddScoped<WithdrawalSettlement>();
+        services.AddScoped<ICommandHandler<RequestWithdrawalCommand, WithdrawalResponse>, RequestWithdrawalCommandHandler>();
+        services.AddScoped<ICommandHandler<CancelWithdrawalCommand, WithdrawalDecisionResponse>, CancelWithdrawalCommandHandler>();
+        services.AddScoped<IQueryHandler<GetMyWithdrawalsQuery, WithdrawalListResponse>, GetMyWithdrawalsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetMyWithdrawalQuery, WithdrawalResponse?>, GetMyWithdrawalQueryHandler>();
+        services.AddScoped<IQueryHandler<PreviewWithdrawalQuery, WithdrawalPreviewResponse>, PreviewWithdrawalQueryHandler>();
+
+        // Withdrawals: admin side
+        services.AddScoped<IWithdrawalProcessor, WithdrawalProcessor>();
+        services.AddScoped<IQueryHandler<ListAdminWithdrawalsQuery, AdminWithdrawalListResponse>, ListAdminWithdrawalsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAdminWithdrawalQuery, AdminWithdrawalResponse?>, GetAdminWithdrawalQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAdminWithdrawalSummaryQuery, AdminWithdrawalSummaryResponse>, GetAdminWithdrawalSummaryQueryHandler>();
+        services.AddScoped<ICommandHandler<ApproveWithdrawalCommand, WithdrawalDecisionResponse?>, ApproveWithdrawalCommandHandler>();
+        services.AddScoped<ICommandHandler<RejectWithdrawalCommand, WithdrawalDecisionResponse?>, RejectWithdrawalCommandHandler>();
+        services.AddScoped<ICommandHandler<MarkWithdrawalPaidCommand, WithdrawalDecisionResponse?>, MarkWithdrawalPaidCommandHandler>();
+        services.AddScoped<ICommandHandler<MarkWithdrawalFailedCommand, WithdrawalDecisionResponse?>, MarkWithdrawalFailedCommandHandler>();
+        services.AddScoped<ICommandHandler<AcknowledgeWithdrawalCommand, WithdrawalDecisionResponse?>, AcknowledgeWithdrawalCommandHandler>();
+        services.AddScoped<ICommandHandler<ProcessPayoutWebhookCommand, PayoutWebhookResult>, ProcessPayoutWebhookCommandHandler>();
 
         services.AddScoped<IQueryHandler<GetMyWalletTransactionsQuery,WalletTransactionListResponse>,GetMyWalletTransactionsQueryHandler>();
 

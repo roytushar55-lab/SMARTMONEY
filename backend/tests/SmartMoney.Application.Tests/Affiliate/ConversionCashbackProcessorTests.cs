@@ -16,6 +16,7 @@ public sealed class ConversionCashbackProcessorTests
     private readonly Mock<IAffiliateClickRepository> _clicks = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactions = new();
     private readonly Mock<IUserRepository> _users = new();
+    private readonly Mock<ICashbackEventRepository> _events = new();
 
     private readonly Guid _clickId = Guid.NewGuid();
     private readonly Guid _userId = Guid.NewGuid();
@@ -26,7 +27,7 @@ public sealed class ConversionCashbackProcessorTests
     {
         return new ConversionCashbackProcessor(
             _cashbacks.Object, _rateResolver.Object, _stores.Object, _wallets.Object,
-            _clicks.Object, _walletTransactions.Object, _users.Object);
+            _clicks.Object, _walletTransactions.Object, _users.Object, _events.Object);
     }
 
     private static User NewUser()

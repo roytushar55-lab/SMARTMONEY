@@ -22,6 +22,9 @@ public sealed class WalletTransactionConfiguration
         builder.Property(x => x.PendingBalanceAfter)
             .HasPrecision(18, 2);
 
+        builder.Property(x => x.HeldBalanceAfter)
+            .HasPrecision(18, 2);
+
         // Stored as the enum NAME ("CashbackPending", ...) so the ledger is
         // readable directly and admin tooling never has to map magic numbers.
         // Renaming an enum member is a data migration.
@@ -48,10 +51,17 @@ public sealed class WalletTransactionConfiguration
             .HasForeignKey(x => x.CashbackId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(x => x.Withdrawal)
+            .WithMany()
+            .HasForeignKey(x => x.WithdrawalId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(x => new { x.WalletId, x.CreatedAt });
 
         builder.HasIndex(x => new { x.UserId, x.CreatedAt });
 
         builder.HasIndex(x => x.CashbackId);
+
+        builder.HasIndex(x => x.WithdrawalId);
     }
 }

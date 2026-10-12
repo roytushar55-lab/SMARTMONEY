@@ -1,5 +1,7 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using SmartMoney.Application.Abstractions.Persistence;
+using SmartMoney.Application.Features.Cashbacks.ListCashbacks;
 using SmartMoney.Domain.Entities;
 using SmartMoney.Domain.Enums;
 using SmartMoney.Infrastructure.Persistence.Context;
@@ -34,17 +36,20 @@ public sealed class CashbackRepository : ICashbackRepository
         Guid id,
         CancellationToken cancellationToken = default)
     {
+        // The conversion rides along so decisions can record the network
+        // status they were made against.
         return await _context.Cashbacks
+            .Include(cashback => cashback.AffiliateConversion)
             .FirstOrDefaultAsync(cashback => cashback.Id == id, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Cashback>> ListByStatusAsync(
-        CashbackStatus? status,
+    public async Task<IReadOnlyList<Cashback>> ListAsync(
+        CashbackListFilter filter,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        return await QueryByStatus(status)
+        return await Filtered(filter)
             .AsNoTracking()
             .Include(cashback => cashback.User)
             .Include(cashback => cashback.AffiliateConversion)
@@ -56,11 +61,21 @@ public sealed class CashbackRepository : ICashbackRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<int> CountByStatusAsync(
-        CashbackStatus? status,
+    public async Task<int> CountAsync(
+        CashbackListFilter filter,
         CancellationToken cancellationToken = default)
     {
-        return await QueryByStatus(status).CountAsync(cancellationToken);
+        return await Filtered(filter).CountAsync(cancellationToken);
+    }
+
+    public async Task<decimal> SumAmountAsync(
+        Expression<Func<Cashback, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        // Nullable sum so an empty set gives zero instead of an error.
+        return await _context.Cashbacks
+            .Where(predicate)
+            .SumAsync(cashback => (decimal?)cashback.CashbackAmount, cancellationToken) ?? 0m;
     }
 
     public async Task<IReadOnlyList<Cashback>> ListByUserIdAsync(
@@ -120,10 +135,15 @@ public sealed class CashbackRepository : ICashbackRepository
         return rows.ToDictionary(row => row.Status, row => (row.Count, row.Amount));
     }
 
-    private IQueryable<Cashback> QueryByStatus(CashbackStatus? status)
+    private IQueryable<Cashback> Filtered(CashbackListFilter filter)
     {
-        return status is CashbackStatus filter
-            ? _context.Cashbacks.Where(cashback => cashback.Status == filter)
-            : _context.Cashbacks;
+        IQueryable<Cashback> query = _context.Cashbacks;
+
+        foreach (var predicate in filter.Predicates())
+        {
+            query = query.Where(predicate);
+        }
+
+        return query;
     }
 }

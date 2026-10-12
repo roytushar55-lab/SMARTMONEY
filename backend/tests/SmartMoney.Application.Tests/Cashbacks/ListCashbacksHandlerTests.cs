@@ -54,15 +54,18 @@ public sealed class ListCashbacksHandlerTests
     public async Task MapsEntityGraphIncludingNetworkStatusAndStore()
     {
         var cashback = NewCashbackGraph("Myntra");
-        _cashbacks.Setup(c => c.ListByStatusAsync(
-                CashbackStatus.AwaitingAdminReview, 1, 20, It.IsAny<CancellationToken>()))
+        _cashbacks.Setup(c => c.ListAsync(
+                It.Is<CashbackListFilter>(f => f.Status == CashbackStatus.AwaitingAdminReview),
+                1, 20, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { cashback });
-        _cashbacks.Setup(c => c.CountByStatusAsync(
-                CashbackStatus.AwaitingAdminReview, It.IsAny<CancellationToken>()))
+        _cashbacks.Setup(c => c.CountAsync(
+                It.Is<CashbackListFilter>(f => f.Status == CashbackStatus.AwaitingAdminReview),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
         var response = await CreateHandler().HandleAsync(
-            new ListCashbacksQuery(CashbackStatus.AwaitingAdminReview, 1, 20),
+            new ListCashbacksQuery(
+                new CashbackListFilter { Status = CashbackStatus.AwaitingAdminReview }, 1, 20),
             CancellationToken.None);
 
         var item = Assert.Single(response.Items);
@@ -78,17 +81,43 @@ public sealed class ListCashbacksHandlerTests
     }
 
     [Fact]
+    public async Task RowsCarryTheirQueueAndOverdueFlag()
+    {
+        // Validated and not yet decided: ready to approve. Expected date is 60
+        // days out, so it is only overdue when "now" is later than that.
+        var cashback = NewCashbackGraph("Myntra");
+        _cashbacks.Setup(c => c.ListAsync(
+                It.IsAny<CashbackListFilter>(), 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { cashback });
+        _cashbacks.Setup(c => c.CountAsync(
+                It.IsAny<CashbackListFilter>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var onTime = await CreateHandler().HandleAsync(
+            new ListCashbacksQuery(new CashbackListFilter(), 1, 20), CancellationToken.None);
+        var late = await CreateHandler().HandleAsync(
+            new ListCashbacksQuery(
+                new CashbackListFilter { NowUtc = DateTime.UtcNow.AddDays(90) }, 1, 20),
+            CancellationToken.None);
+
+        Assert.Equal("ReadyToApprove", Assert.Single(onTime.Items).Queue);
+        Assert.False(onTime.Items[0].IsOverdue);
+        Assert.True(Assert.Single(late.Items).IsOverdue);
+    }
+
+    [Fact]
     public async Task UnattributedClickChain_MapsNullStoreWithoutThrowing()
     {
         var cashback = NewCashbackGraph(storeName: null);
-        _cashbacks.Setup(c => c.ListByStatusAsync(
-                null, 1, 20, It.IsAny<CancellationToken>()))
+        _cashbacks.Setup(c => c.ListAsync(
+                It.IsAny<CashbackListFilter>(), 1, 20, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { cashback });
-        _cashbacks.Setup(c => c.CountByStatusAsync(null, It.IsAny<CancellationToken>()))
+        _cashbacks.Setup(c => c.CountAsync(
+                It.IsAny<CashbackListFilter>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
         var response = await CreateHandler().HandleAsync(
-            new ListCashbacksQuery(null, 1, 20), CancellationToken.None);
+            new ListCashbacksQuery(new CashbackListFilter(), 1, 20), CancellationToken.None);
 
         Assert.Null(Assert.Single(response.Items).StoreName);
     }
@@ -100,19 +129,22 @@ public sealed class ListCashbacksHandlerTests
     public async Task PagingIsClamped(
         int requestedPage, int requestedSize, int expectedPage, int expectedSize)
     {
-        _cashbacks.Setup(c => c.ListByStatusAsync(
-                null, expectedPage, expectedSize, It.IsAny<CancellationToken>()))
+        _cashbacks.Setup(c => c.ListAsync(
+                It.IsAny<CashbackListFilter>(), expectedPage, expectedSize,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<Cashback>());
-        _cashbacks.Setup(c => c.CountByStatusAsync(null, It.IsAny<CancellationToken>()))
+        _cashbacks.Setup(c => c.CountAsync(
+                It.IsAny<CashbackListFilter>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
         var response = await CreateHandler().HandleAsync(
-            new ListCashbacksQuery(null, requestedPage, requestedSize),
+            new ListCashbacksQuery(new CashbackListFilter(), requestedPage, requestedSize),
             CancellationToken.None);
 
         Assert.Equal(expectedPage, response.Page);
         Assert.Equal(expectedSize, response.PageSize);
-        _cashbacks.Verify(c => c.ListByStatusAsync(
-            null, expectedPage, expectedSize, It.IsAny<CancellationToken>()));
+        _cashbacks.Verify(c => c.ListAsync(
+            It.IsAny<CashbackListFilter>(), expectedPage, expectedSize,
+            It.IsAny<CancellationToken>()));
     }
 }

@@ -11,7 +11,9 @@ public sealed class ReverseCashbackHandlerTests
     private readonly Mock<ICashbackRepository> _cashbacks = new();
     private readonly Mock<IWalletRepository> _wallets = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactions = new();
+    private readonly Mock<ICashbackEventRepository> _events = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Guid _reviewerId = Guid.NewGuid();
 
     private readonly Guid _userId = Guid.NewGuid();
     private readonly Wallet _wallet;
@@ -30,6 +32,7 @@ public sealed class ReverseCashbackHandlerTests
             _cashbacks.Object,
             _wallets.Object,
             _walletTransactions.Object,
+            _events.Object,
             _unitOfWork.Object);
     }
 
@@ -59,7 +62,7 @@ public sealed class ReverseCashbackHandlerTests
             .Callback<WalletTransaction, CancellationToken>((tx, _) => entry = tx);
 
         var response = await CreateHandler().HandleAsync(
-            new ReverseCashbackCommand(cashback.Id), CancellationToken.None);
+            new ReverseCashbackCommand(cashback.Id, _reviewerId, "test reason"), CancellationToken.None);
 
         Assert.NotNull(response);
         Assert.Equal("Reversed", response!.Status);
@@ -85,8 +88,24 @@ public sealed class ReverseCashbackHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(
-                new ReverseCashbackCommand(cashback.Id), CancellationToken.None));
+                new ReverseCashbackCommand(cashback.Id, _reviewerId, "test reason"), CancellationToken.None));
 
+        _unitOfWork.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task MoneyHeldForAWithdrawal_ThrowsAnExplainingMessageWithoutSaving()
+    {
+        var cashback = ConfirmedFlaggedCashback();
+        _wallet.HoldForWithdrawal(100.00m);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateHandler().HandleAsync(
+                new ReverseCashbackCommand(cashback.Id, _reviewerId, "test reason"), CancellationToken.None));
+
+        // The admin sees this text in the 409 response.
+        Assert.Contains("held for a pending withdrawal", exception.Message);
         _unitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -99,7 +118,7 @@ public sealed class ReverseCashbackHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(
-                new ReverseCashbackCommand(cashback.Id), CancellationToken.None));
+                new ReverseCashbackCommand(cashback.Id, _reviewerId, "test reason"), CancellationToken.None));
 
         _unitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -112,7 +131,7 @@ public sealed class ReverseCashbackHandlerTests
     public async Task UnknownCashback_ReturnsNull()
     {
         var response = await CreateHandler().HandleAsync(
-            new ReverseCashbackCommand(Guid.NewGuid()), CancellationToken.None);
+            new ReverseCashbackCommand(Guid.NewGuid(), _reviewerId, "test reason"), CancellationToken.None);
 
         Assert.Null(response);
     }

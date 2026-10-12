@@ -35,6 +35,7 @@ public sealed class GetMyWalletQueryHandler
         {
             AvailableBalance = wallet.AvailableBalance,
             PendingBalance = wallet.PendingBalance,
+            HeldBalance = wallet.HeldBalance,
             TotalEarned = wallet.TotalEarned,
             TotalWithdrawn = wallet.TotalWithdrawn
         };

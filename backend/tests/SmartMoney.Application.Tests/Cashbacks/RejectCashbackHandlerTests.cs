@@ -11,7 +11,9 @@ public sealed class RejectCashbackHandlerTests
     private readonly Mock<ICashbackRepository> _cashbacks = new();
     private readonly Mock<IWalletRepository> _wallets = new();
     private readonly Mock<IWalletTransactionRepository> _walletTransactions = new();
+    private readonly Mock<ICashbackEventRepository> _events = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Guid _reviewerId = Guid.NewGuid();
 
     private readonly Guid _userId = Guid.NewGuid();
     private readonly Wallet _wallet;
@@ -30,6 +32,7 @@ public sealed class RejectCashbackHandlerTests
             _cashbacks.Object,
             _wallets.Object,
             _walletTransactions.Object,
+            _events.Object,
             _unitOfWork.Object);
     }
 
@@ -55,7 +58,7 @@ public sealed class RejectCashbackHandlerTests
             .Callback<WalletTransaction, CancellationToken>((tx, _) => entry = tx);
 
         var response = await CreateHandler().HandleAsync(
-            new RejectCashbackCommand(cashback.Id), CancellationToken.None);
+            new RejectCashbackCommand(cashback.Id, _reviewerId, "test reason"), CancellationToken.None);
 
         Assert.NotNull(response);
         Assert.Equal("Rejected", response!.Status);
@@ -82,7 +85,7 @@ public sealed class RejectCashbackHandlerTests
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(
-                new RejectCashbackCommand(cashback.Id), CancellationToken.None));
+                new RejectCashbackCommand(cashback.Id, _reviewerId, "test reason"), CancellationToken.None));
 
         Assert.Contains("reverse", exception.Message);
         Assert.Equal(150.00m, _wallet.AvailableBalance);
@@ -95,7 +98,7 @@ public sealed class RejectCashbackHandlerTests
     public async Task UnknownCashback_ReturnsNull()
     {
         var response = await CreateHandler().HandleAsync(
-            new RejectCashbackCommand(Guid.NewGuid()), CancellationToken.None);
+            new RejectCashbackCommand(Guid.NewGuid(), _reviewerId, "test reason"), CancellationToken.None);
 
         Assert.Null(response);
         _unitOfWork.Verify(
@@ -110,7 +113,7 @@ public sealed class RejectCashbackHandlerTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateHandler().HandleAsync(
-                new RejectCashbackCommand(cashback.Id), CancellationToken.None));
+                new RejectCashbackCommand(cashback.Id, _reviewerId, "test reason"), CancellationToken.None));
 
         _unitOfWork.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

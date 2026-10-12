@@ -105,6 +105,26 @@ public sealed class DeleteAccountHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WithMoneyHeldForAWithdrawal_Throws_AndKeepsAccount()
+    {
+        _wallet.AddPendingCashback(50);
+        _wallet.ApproveCashback(50);
+        _wallet.HoldForWithdrawal(50); // available is now 0, but 50 is in flight
+        var handler = CreateHandler();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.HandleAsync(
+                new DeleteAccountCommand(_user.Id, Password),
+                CancellationToken.None));
+
+        Assert.Contains("withdrawal", exception.Message);
+        Assert.NotEqual(UserStatus.Deleted, _user.Status);
+        _unitOfWork.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WithUnknownUser_ThrowsNotFound()
     {
         var handler = CreateHandler();

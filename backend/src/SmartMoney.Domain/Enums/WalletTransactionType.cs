@@ -23,5 +23,23 @@ public enum WalletTransactionType
     /// Admin reversed a previously confirmed cashback — debited from
     /// AvailableBalance and TotalEarned.
     /// </summary>
-    CashbackReversed = 4
+    CashbackReversed = 4,
+
+    /// <summary>
+    /// A withdrawal was requested — moved from AvailableBalance to
+    /// HeldBalance so it cannot be spent twice.
+    /// </summary>
+    WithdrawalRequested = 5,
+
+    /// <summary>
+    /// The payout reached the user — removed from HeldBalance and added to
+    /// TotalWithdrawn.
+    /// </summary>
+    WithdrawalCompleted = 6,
+
+    /// <summary>
+    /// The withdrawal failed, was rejected or cancelled — moved from
+    /// HeldBalance back to AvailableBalance.
+    /// </summary>
+    WithdrawalReleased = 7
 }

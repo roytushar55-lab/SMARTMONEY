@@ -18,17 +18,20 @@ public sealed class ReverseCashbackCommandHandler
     private readonly ICashbackRepository _cashbackRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IWalletTransactionRepository _walletTransactionRepository;
+    private readonly ICashbackEventRepository _eventRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public ReverseCashbackCommandHandler(
         ICashbackRepository cashbackRepository,
         IWalletRepository walletRepository,
         IWalletTransactionRepository walletTransactionRepository,
+        ICashbackEventRepository eventRepository,
         IUnitOfWork unitOfWork)
     {
         _cashbackRepository = cashbackRepository;
         _walletRepository = walletRepository;
         _walletTransactionRepository = walletTransactionRepository;
+        _eventRepository = eventRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -44,7 +47,21 @@ public sealed class ReverseCashbackCommandHandler
             return null;
         }
 
+        var statusBefore = cashback.Status;
+
         cashback.Reverse();
+
+        await _eventRepository.AddAsync(
+            new CashbackEvent(
+                cashback.Id,
+                CashbackEventType.Reversed,
+                command.ReviewerId,
+                statusBefore,
+                cashback.Status,
+                cashback.CashbackAmount,
+                cashback.AffiliateConversion?.NetworkStatus,
+                command.Reason),
+            cancellationToken);
 
         var wallet = await _walletRepository.GetByIdAsync(
             cashback.WalletId, cancellationToken);
@@ -66,7 +83,8 @@ public sealed class ReverseCashbackCommandHandler
                 cashback.Id,
                 "Cashback reversed by admin.",
                 wallet.AvailableBalance,
-                wallet.PendingBalance),
+                wallet.PendingBalance,
+                wallet.HeldBalance),
             cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

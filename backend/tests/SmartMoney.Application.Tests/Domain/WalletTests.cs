@@ -111,6 +111,54 @@ public sealed class WalletTests
         Assert.Equal(150.00m, wallet.TotalEarned);
     }
 
+    [Fact]
+    public void ReverseConfirmedCashback_MoneyHeldForWithdrawal_SaysSoAndChangesNothing()
+    {
+        var wallet = NewWallet();
+        wallet.AddPendingCashback(150.00m);
+        wallet.ApproveCashback(150.00m);
+        wallet.HoldForWithdrawal(100.00m);
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => wallet.ReverseConfirmedCashback(150.00m));
+
+        Assert.Contains("held for a pending withdrawal", exception.Message);
+        Assert.Contains("100", exception.Message);
+        Assert.Equal(50.00m, wallet.AvailableBalance);
+        Assert.Equal(100.00m, wallet.HeldBalance);
+        Assert.Equal(150.00m, wallet.TotalEarned);
+    }
+
+    [Fact]
+    public void ReverseConfirmedCashback_AlreadyWithdrawn_KeepsTheGenericMessage()
+    {
+        var wallet = NewWallet();
+        wallet.AddPendingCashback(150.00m);
+        wallet.ApproveCashback(150.00m);
+        wallet.Withdraw(100.00m);
+        wallet.HoldForWithdrawal(10.00m); // held + available (40) still short of 150
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => wallet.ReverseConfirmedCashback(150.00m));
+
+        Assert.DoesNotContain("held for a pending withdrawal", exception.Message);
+    }
+
+    [Fact]
+    public void ReverseConfirmedCashback_WorksAgainOnceTheHoldIsReleased()
+    {
+        var wallet = NewWallet();
+        wallet.AddPendingCashback(150.00m);
+        wallet.ApproveCashback(150.00m);
+        wallet.HoldForWithdrawal(100.00m);
+        wallet.ReleaseWithdrawalHold(100.00m);
+
+        wallet.ReverseConfirmedCashback(150.00m);
+
+        Assert.Equal(0m, wallet.AvailableBalance);
+        Assert.Equal(0m, wallet.TotalEarned);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]

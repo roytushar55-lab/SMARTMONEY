@@ -1,20 +1,19 @@
 using SmartMoney.Application.Abstractions.Messaging;
 using SmartMoney.Application.Contracts.Cashbacks;
-using SmartMoney.Domain.Enums;
 
 namespace SmartMoney.Application.Features.Cashbacks.ListCashbacks;
 
 public sealed class ListCashbacksQuery : IQuery<AdminCashbackListResponse>
 {
-    public CashbackStatus? Status { get; }
+    public CashbackListFilter Filter { get; }
 
     public int Page { get; }
 
     public int PageSize { get; }
 
-    public ListCashbacksQuery(CashbackStatus? status, int page, int pageSize)
+    public ListCashbacksQuery(CashbackListFilter filter, int page, int pageSize)
     {
-        Status = status;
+        Filter = filter;
         Page = page;
         PageSize = pageSize;
     }
