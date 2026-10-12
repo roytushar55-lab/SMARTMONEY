@@ -1,0 +1,43 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "smartmoney-backend-test",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "D:\\Projects\\Personal\\SMARTMONEY\\backend\\tools\\e2e\\start-api.cmd"
+      ],
+      "port": 7056,
+      "url": "https://localhost:7056"
+    },
+    {
+      "name": "smartmoney-backend-real",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "D:\\Projects\\Personal\\SMARTMONEY\\backend\\tools\\e2e\\start-api-real.cmd"
+      ],
+      "port": 7056,
+      "url": "https://localhost:7056"
+    },
+    {
+      "name": "smartmoney-admin",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d D:\\Projects\\Personal\\SMARTMONEY\\admin && flutter run -d web-server --web-port 5180 --release"
+      ],
+      "port": 5180
+    },
+    {
+      "name": "smartmoney-mobile",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d D:\\Projects\\Personal\\SMARTMONEY\\smart_money_mobile && flutter run -d web-server --web-port 8088 --release"
+      ],
+      "port": 8088
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Affiliate Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <h1>Affiliate Simulator</h1>
+      <div class="target" id="target" aria-live="polite">Loading…</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="banner" class="banner" hidden></div>
+
+    <section class="card" aria-labelledby="click-h">
+      <h2 id="click-h">1. Create a tracked click</h2>
+      <p class="muted">Does what the app does when a user taps Earn Cashback: signs in as a test user, creates the click, and reads the <code>subid</code> for you. The password is used once and not stored.</p>
+      <form id="clickForm" class="grid" autocomplete="off">
+        <label>Test user email
+          <input id="clickEmail" type="email" autocomplete="off" spellcheck="false" placeholder="e2e-user-…@example.com">
+        </label>
+        <label>Password
+          <input id="clickPassword" type="password" autocomplete="new-password">
+        </label>
+        <label class="wide">Store <span class="muted">(only stores with an active affiliate mapping give a subid)</span>
+          <span class="row">
+            <select id="clickStore" aria-label="Store"></select>
+            <button type="submit" id="makeClick" class="primary">Create click</button>
+          </span>
+        </label>
+      </form>
+      <p id="clickNote" class="note" hidden></p>
+    </section>
+
+    <section class="card" aria-labelledby="sale-h">
+      <h2 id="sale-h">2. The sale</h2>
+      <p class="muted">Plays the role of the affiliate network. Use the subid from step 1, or paste one from any tracked click (the tracking reference in the merchant URL after Earn Cashback).</p>
+      <div class="grid">
+        <label class="wide">Subid
+          <input id="subId" autocomplete="off" spellcheck="false" placeholder="e.g. 2d989a9049ec4e08824e6ffca303a069">
+        </label>
+        <label>Commission (₹)
+          <input id="commission" inputmode="decimal" value="1200">
+        </label>
+        <label>Sale amount (₹)
+          <input id="saleAmount" inputmode="decimal" value="12000">
+        </label>
+        <label>User share of commission (%) <span class="muted">(for the hint only)</span>
+          <input id="share" inputmode="decimal" value="50">
+        </label>
+        <p id="expected" class="expected" aria-live="polite"></p>
+        <label class="wide">Transaction id <span class="muted">(blank = a new sale each run)</span>
+          <span class="row">
+            <input id="transactionId" autocomplete="off" spellcheck="false" placeholder="SIM-…">
+            <button type="button" class="ghost" id="useLast" disabled>Use last</button>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="scn-h">
+      <h2 id="scn-h">Scenarios</h2>
+      <p class="muted">Each runs its steps in order and stops at the first error.</p>
+      <div id="scenarios" class="scenarios"></div>
+    </section>
+
+    <section class="card" aria-labelledby="one-h">
+      <h2 id="one-h">One update</h2>
+      <p class="muted">Send a single status. Use the same transaction id to move an existing sale along.</p>
+      <div class="row">
+        <select id="status" aria-label="Status"></select>
+        <button type="button" id="sendOne" class="primary">Send</button>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="log-h">
+      <div class="row between">
+        <h2 id="log-h">Log</h2>
+        <button type="button" class="ghost" id="clear">Clear</button>
+      </div>
+      <p id="empty" class="muted">Nothing sent yet.</p>
+      <ol id="log" class="log" aria-live="polite"></ol>
+    </section>
+  </main>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

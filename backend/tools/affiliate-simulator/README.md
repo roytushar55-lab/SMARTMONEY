@@ -41,3 +41,31 @@ and `CashbackAmount = commission x UserSharePercent` from `CashbackSettings`.
 The payload field names mirror the publicly documented Cuelinks Transaction
 Update conventions; verify against a live account before pointing real
 postbacks here.
+
+## Web page (local tool)
+
+A browser front end for the same postbacks, in `ui/`. It runs on your machine
+only and keeps the webhook token on its server side, never in the page.
+
+```
+set SM_WEBHOOK_TOKEN=<Webhooks:CuelinksToken value>      (cmd; PowerShell: $env:SM_WEBHOOK_TOKEN = "...")
+tools\affiliate-simulator\ui\start.cmd                    (from backend\; or: node tools/affiliate-simulator/ui/server.mjs)
+```
+
+Open http://localhost:5290.
+
+1. **Create a tracked click:** enter a test user's email and password and choose a
+   store. The tool signs in, creates the click and follows the redirect inside the
+   API (it never leaves it), then fills in the `subid` for you. The password is
+   used once, then cleared; it is not stored or logged. Only stores with an active
+   affiliate mapping give a subid; others explain why not.
+2. **The sale:** the subid (or paste one from any click), the commission and sale
+   amount, and an expected-cashback hint (commission times the share percent you
+   type; a store override changes the real figure). Then run a scenario (the same
+   five as the PowerShell script) or send a single status. Leave the transaction id
+blank for a new sale each run; press "Use last" to move the previous sale along.
+Every request and answer is logged with its outcome.
+
+Settings: `SM_SIM_TARGET` (default `https://localhost:7056`), `SM_SIM_PORT`
+(default `5290`). It listens on 127.0.0.1 only and refuses a non-local target
+unless `SM_SIM_ALLOW_REMOTE=1`. Tests: `node --test tools/affiliate-simulator/ui/simulator.test.mjs`.
