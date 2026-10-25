@@ -1,0 +1,84 @@
+# Checks every pull request before it can be merged: backend tests, and
+# analyzer + tests for both Flutter apps. Nothing is deployed from here.
+# Make it required: GitHub > Settings > Branches > protect main > require
+# the "Backend tests" and both "Flutter" checks to pass.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  FLUTTER_VERSION: "3.44.8"
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore backend/SmartMoney.slnx
+
+      - name: Build
+        run: dotnet build backend/SmartMoney.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test backend/tests/SmartMoney.Application.Tests
+          --configuration Release --no-build
+          --logger "trx;LogFileName=backend-tests.trx"
+          --results-directory backend/TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/TestResults
+          if-no-files-found: ignore
+
+  flutter:
+    name: Flutter ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [smart_money_mobile, admin]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test

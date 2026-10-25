@@ -3,7 +3,7 @@
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:label="smart_money_mobile"
+        android:label="SmartMoney"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

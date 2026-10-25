@@ -1,6 +1,6 @@
 {
-    "name": "smart_money_mobile",
-    "short_name": "smart_money_mobile",
+    "name": "SmartMoney",
+    "short_name": "SmartMoney",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

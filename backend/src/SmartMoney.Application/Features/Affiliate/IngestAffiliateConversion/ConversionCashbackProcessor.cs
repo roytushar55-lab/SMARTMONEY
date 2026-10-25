@@ -103,6 +103,10 @@ public sealed class ConversionCashbackProcessor
                 break;
 
             case "validated":
+            // Cuelinks' "payable": the advertiser approved the sale and the
+            // commission is due. Same meaning for the user as "validated",
+            // and it covers a missed "validated" postback.
+            case "payable":
             case "rejected":
             case "cancelled":
             case "reversed":

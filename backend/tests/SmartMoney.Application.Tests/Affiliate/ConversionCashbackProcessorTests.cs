@@ -161,6 +161,24 @@ public sealed class ConversionCashbackProcessorTests
     }
 
     [Fact]
+    public async Task Payable_WithExistingPendingCashback_FlagsForReview_LikeValidated()
+    {
+        // Cuelinks reports "payable" once the advertiser approved the sale; it
+        // must queue the same admin review as "validated" (it also covers a
+        // missed "validated" postback).
+        var existing = ExistingCashback();
+        _cashbacks.Setup(c => c.GetByConversionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+
+        await CreateProcessor().ProcessAsync(NewConversion("payable"), CancellationToken.None);
+
+        Assert.Equal(CashbackStatus.AwaitingAdminReview, existing.Status);
+        _walletTransactions.Verify(
+            t => t.AddAsync(It.IsAny<WalletTransaction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task NetworkPaid_NeverBecomesPaidOut()
     {
         // THE critical business rule: the network's "paid" means the network

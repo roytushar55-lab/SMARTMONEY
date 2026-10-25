@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release builds need this here: the debug and profile manifests add it
+         only for development, so without it the released app cannot reach the API. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="smartmoney_admin"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false"
+        android:label="SmartMoney Admin"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

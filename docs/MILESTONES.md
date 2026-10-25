@@ -53,7 +53,7 @@
 - [ ] Update both legal documents once the provider is chosen, since they name Cashfree
 
 ### M5 Infrastructure
-- [ ] Move backend, database and storage to Azure. The code still uses Supabase for photos and catalogue images, and the legal documents already say Azure
+- [ ] Move backend, database and storage to Azure. Code side done on 18 Oct 2026: Azure Blob Storage for photos and catalogue images behind `Storage:Provider`, a `/health` endpoint, and `backend/tools/azure` scripts to provision Postgres and Blob Storage and copy the data (runbook `backend/docs/AZURE_MIGRATION.md`). Still to run against a real subscription
 - [ ] Set real SMTP credentials so OTP emails reach users. This was the earlier blocker for testing with real users
 - [ ] Deploy the API on the domain smart-money.in, then point the apps at it instead of localhost
 - [ ] Verify the Cuelinks webhook against a live account. It has only been tested with the local simulator

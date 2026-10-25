@@ -17,7 +17,13 @@ public sealed class WebhooksControllerTests
 
     private readonly Mock<ICommandHandler<IngestAffiliateConversionCommand, IngestAffiliateConversionResponse>> _handler = new();
 
-    private WebhooksController CreateController(string body, string? configuredToken = ValidToken)
+    private WebhooksController CreateController(
+        string body,
+        string? configuredToken = ValidToken,
+        string method = "POST",
+        string? query = null,
+        string? contentType = null,
+        string? headerToken = null)
     {
         var configValues = new Dictionary<string, string?>();
         if (configuredToken is not null)
@@ -34,14 +40,35 @@ public sealed class WebhooksControllerTests
         {
             ControllerContext = new ControllerContext
             {
-                HttpContext = new DefaultHttpContext
-                {
-                    Request = { Body = new MemoryStream(Encoding.UTF8.GetBytes(body)) },
-                },
+                HttpContext = BuildContext(body, method, query, contentType, headerToken),
             },
         };
 
         return controller;
+    }
+
+    private static DefaultHttpContext BuildContext(
+        string body, string method, string? query, string? contentType, string? headerToken)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Method = method;
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+        if (query is not null)
+        {
+            context.Request.QueryString = new QueryString(query);
+        }
+
+        if (contentType is not null)
+        {
+            context.Request.ContentType = contentType;
+        }
+
+        if (headerToken is not null)
+        {
+            context.Request.Headers["X-Webhook-Token"] = headerToken;
+        }
+
+        return context;
     }
 
     private static string ValidBody(string status = "pending")
@@ -145,5 +172,113 @@ public sealed class WebhooksControllerTests
 
         var response = Assert.IsType<ObjectResult>(result);
         Assert.Equal(503, response.StatusCode);
+    }
+
+    private void CaptureInto(Action<IngestAffiliateConversionCommand> capture)
+    {
+        _handler.Setup(h => h.HandleAsync(
+                It.IsAny<IngestAffiliateConversionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IngestAffiliateConversionCommand, CancellationToken>((c, _) => capture(c))
+            .ReturnsAsync(new IngestAffiliateConversionResponse(Guid.NewGuid(), "Created", true, null));
+    }
+
+    [Fact]
+    public async Task CuelinksGetPostback_WithMappedQueryFields_IsIngested()
+    {
+        IngestAffiliateConversionCommand? forwarded = null;
+        CaptureInto(c => forwarded = c);
+
+        const string query =
+            "?transaction_id=1234567&campaign_id=101&status=validated&sale_amount=1500.00" +
+            "&commission=67.50&currency=INR&transaction_date=2026-03-20" +
+            "&updated_at=2026-03-22%2014%3A00%3A00&sub_id=ref-9&token=" + ValidToken;
+
+        var result = await CreateController("", method: "GET", query: query)
+            .CuelinksTransactionUpdate(ValidToken, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(forwarded);
+        Assert.Equal("1234567", forwarded!.NetworkTransactionId);
+        Assert.Equal("ref-9", forwarded.TrackingReference);
+        Assert.Equal("validated", forwarded.NetworkStatus);
+        Assert.Equal(1500.00m, forwarded.OrderAmount);
+        Assert.Equal(67.50m, forwarded.CommissionAmount);
+        Assert.Equal("INR", forwarded.Currency);
+        Assert.Equal(new DateTime(2026, 3, 20, 0, 0, 0, DateTimeKind.Utc), forwarded.TransactionOccurredAt);
+        Assert.Equal(new DateTime(2026, 3, 22, 14, 0, 0, DateTimeKind.Utc), forwarded.NetworkUpdatedAt);
+        // The shared secret is never stored with the conversion.
+        Assert.DoesNotContain(ValidToken, forwarded.RawPayload);
+        Assert.Contains("1234567", forwarded.RawPayload);
+    }
+
+    [Fact]
+    public async Task CuelinksFormPostback_WithDefaultMacroNamesAndSecretField_IsIngested()
+    {
+        IngestAffiliateConversionCommand? forwarded = null;
+        CaptureInto(c => forwarded = c);
+
+        // Cuelinks' own macro names (aff_sub, user_commission, transaction_timestamp)
+        // and the secret as a constant body parameter, form-encoded.
+        string body =
+            "transaction_id=777&status=payable&sale_amount=999.5&user_commission=45.25" +
+            "&aff_sub=ref-7&transaction_timestamp=2026-03-22T14%3A00%3A00Z&secret=" + ValidToken;
+
+        var result = await CreateController(
+                body, contentType: "application/x-www-form-urlencoded")
+            .CuelinksTransactionUpdate(null, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(forwarded);
+        Assert.Equal("777", forwarded!.NetworkTransactionId);
+        Assert.Equal("ref-7", forwarded.TrackingReference);
+        Assert.Equal("payable", forwarded.NetworkStatus);
+        Assert.Equal(45.25m, forwarded.CommissionAmount);
+        Assert.Equal(999.5m, forwarded.OrderAmount);
+        Assert.Equal(new DateTime(2026, 3, 22, 14, 0, 0, DateTimeKind.Utc), forwarded.NetworkUpdatedAt);
+        Assert.DoesNotContain(ValidToken, forwarded.RawPayload);
+    }
+
+    [Fact]
+    public async Task HeaderToken_IsAccepted()
+    {
+        SetupHandlerSuccess();
+
+        var result = await CreateController(ValidBody(), headerToken: ValidToken)
+            .CuelinksTransactionUpdate(null, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task WrongSecretInFormBody_Returns401()
+    {
+        var result = await CreateController(
+                "transaction_id=1&status=pending&secret=nope",
+                contentType: "application/x-www-form-urlencoded")
+            .CuelinksTransactionUpdate(null, CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(result);
+        _handler.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task NonNumericCommission_Returns400()
+    {
+        var result = await CreateController(
+                "transaction_id=1&status=pending&commission=abc",
+                contentType: "application/x-www-form-urlencoded")
+            .CuelinksTransactionUpdate(ValidToken, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        _handler.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task MissingStatus_Returns400()
+    {
+        var result = await CreateController("", method: "GET", query: "?transaction_id=1")
+            .CuelinksTransactionUpdate(ValidToken, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 }

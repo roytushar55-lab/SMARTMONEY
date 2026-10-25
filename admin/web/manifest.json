@@ -1,6 +1,6 @@
 {
-    "name": "smartmoney_admin",
-    "short_name": "smartmoney_admin",
+    "name": "SmartMoney Admin",
+    "short_name": "SmartMoney Admin",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

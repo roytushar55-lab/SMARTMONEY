@@ -16,7 +16,7 @@ if (hasReleaseKeystore) {
 }
 
 android {
-    namespace = "com.example.smart_money_mobile"
+    namespace = "in.smartmoney.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -26,8 +26,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.smart_money_mobile"
+        // Permanent Play Store identity: never change it after the first upload.
+        applicationId = "in.smartmoney.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

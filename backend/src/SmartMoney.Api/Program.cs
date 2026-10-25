@@ -16,10 +16,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.Configure<SupabaseStorageOptions>(
-    builder.Configuration.GetSection(SupabaseStorageOptions.SectionName));
-builder.Services.AddHttpClient<IProfilePhotoStorage, SupabaseProfilePhotoStorage>();
-builder.Services.AddHttpClient<ICatalogueMediaStorage, SupabaseCatalogueMediaStorage>();
+
+// Uploaded images: Supabase Storage or Azure Blob Storage, chosen by
+// Storage:Provider (see MediaStorageRegistration).
+builder.Services.AddMediaStorage(builder.Configuration);
+
+// Liveness probe for App Service health checks and uptime monitors. It only
+// says the process is up and serving; it deliberately does not touch the
+// database, so a database blip does not make the platform restart the app.
+builder.Services.AddHealthChecks();
 
 // Add services to the container.
 // Framework Services
@@ -269,5 +274,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/health");
 
 app.Run();

@@ -1,0 +1,30 @@
+{
+  "ASPNETCORE_ENVIRONMENT": "Production",
+
+  "ConnectionStrings__DefaultConnection": "Host=<server>.postgres.database.azure.com;Database=smartmoney;Username=smartmoney_admin;Password=<from provision.ps1>;SSL Mode=Require",
+
+  "Jwt__SecretKey": "<64 random characters; deploy-api.ps1 -NewJwtKey prints one>",
+
+  "Seed__SuperAdminEmail": "<the client's admin email; register it in the app, then restart once>",
+
+  "Email__Host": "smtp-relay.brevo.com",
+  "Email__Port": "587",
+  "Email__Username": "<Brevo login email>",
+  "Email__Password": "<Brevo SMTP key>",
+  "Email__FromAddress": "no-reply@smart-money.in",
+  "Email__FromName": "SmartMoney",
+
+  "Storage__Provider": "AzureBlob",
+  "AzureBlobStorage__ConnectionString": "<from provision.ps1>",
+
+  "DataProtection__KeysPath": "/home/data-protection-keys",
+  "DataProtection__AllowUnencryptedKeys": "true",
+
+  "ForwardedHeaders__TrustAllProxies": "true",
+
+  "Webhooks__CuelinksToken": "<a new random token, also set in the Cuelinks postback URL>",
+  "AffiliateNetworks__Cuelinks__ApiKey": "<Cuelinks V3 API key with the write:links scope; until set, the test client is used and no commission is earned>",
+  "AffiliateNetworks__Cuelinks__ChannelId": "<Cuelinks channel ID of the SmartMoney app; optional>",
+
+  "Payouts__Provider": "Manual"
+}
