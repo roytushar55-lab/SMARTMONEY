@@ -53,7 +53,7 @@
 - [ ] Update both legal documents once the provider is chosen, since they name Cashfree
 
 ### M5 Infrastructure
-- [ ] Move backend, database and storage to Azure. Code side done on 18 Oct 2026: Azure Blob Storage for photos and catalogue images behind `Storage:Provider`, a `/health` endpoint, and `backend/tools/azure` scripts to provision Postgres and Blob Storage and copy the data (runbook `backend/docs/AZURE_MIGRATION.md`). Still to run against a real subscription
+- [ ] Move backend, database and storage to Azure. Code side done on 18 Oct 2026: Azure Blob Storage for photos and catalogue images behind `Storage:Provider`, a `/health` endpoint, and `backend/tools/azure` scripts to provision Postgres and Blob Storage and copy the data (runbook `backend/docs/AZURE_MIGRATION.md`). Still to run against a real subscription. The owner's Azure account already holds the database and storage (23 Oct 2026). The UAT and production APIs answered `/health` on 25 Oct 2026
 - [ ] Set real SMTP credentials so OTP emails reach users. This was the earlier blocker for testing with real users
 - [ ] Deploy the API on the domain smart-money.in, then point the apps at it instead of localhost
 - [ ] Verify the Cuelinks webhook against a live account. It has only been tested with the local simulator
@@ -71,7 +71,7 @@
 
 1. Which payout route to take after Cashfree.
 2. Whether to merge pull request #30 into `main` now.
-3. When to start the Azure move, and whether to keep Supabase until then.
+3. ~~When to start the Azure move, and whether to keep Supabase until then.~~ Decided 23 Oct 2026: Azure only, no Supabase.
 4. Whether to launch with gift cards first while cash payouts are arranged.
 
 ## 5. Next five steps

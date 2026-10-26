@@ -6,7 +6,7 @@
 class LegalDocuments {
   LegalDocuments._();
 
-  static const consentVersion = '2026-10-05';
+  static const consentVersion = '2026-10-18';
 
   static const terms = LegalDocument(
     title: 'Terms of Service',

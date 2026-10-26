@@ -47,7 +47,7 @@ const ADMIN = {
   phone: '8' + String(Date.now()).slice(-9),
 };
 const WEBHOOK_TOKEN = `e2e-token-${runId}`;
-const CONSENT_VERSION = '2026-10-05';
+const CONSENT_VERSION = '2026-10-18';
 const FLAT_FEE = 10; // makes the fee maths visible: 10 + 18% tax = 11.80
 
 // ---------------------------------------------------------------- checks

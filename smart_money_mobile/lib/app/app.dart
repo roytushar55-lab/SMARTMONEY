@@ -15,7 +15,7 @@ class SmartMoneyApp extends StatelessWidget {
       listenable: ThemeController.instance,
       builder: (context, _) {
         return MaterialApp(
-          title: 'Smart Money',
+          title: 'SmartMoney',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
