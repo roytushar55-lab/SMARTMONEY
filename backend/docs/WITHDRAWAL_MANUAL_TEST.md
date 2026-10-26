@@ -88,7 +88,7 @@ For each, call `POST /api/identity/register`:
   "password": "Test@12345",
   "ageConfirmed": true,
   "termsAccepted": true,
-  "consentVersion": "2026-10-05"
+  "consentVersion": "2026-10-18"
 }
 ```
 
@@ -465,5 +465,5 @@ facts were checked through the API (settled withdrawals show no bank details,
 and the wallet adds up: available + held + withdrawn = earned).
 
 Two things found while running it, both now fixed in this document: the
-signup consent version must be `2026-10-05`, and a configured `Email:Host`
+signup consent version must be `2026-10-18`, and a configured `Email:Host`
 sends real emails on signup unless blanked (see section 0).

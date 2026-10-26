@@ -65,6 +65,17 @@ public sealed class SecurityPolicyTests
     }
 
     [Fact]
+    public void ConsentPolicy_TheCurrentVersionIsTheNewestAndEarlierOnesStayAccepted()
+    {
+        Assert.Equal("2026-10-18", ConsentPolicy.CurrentVersion);
+
+        // App builds that still show the earlier texts keep working.
+        Assert.True(ConsentPolicy.IsAccepted("2026-10-05"));
+        Assert.True(ConsentPolicy.IsAccepted("2026-10-02"));
+        Assert.True(ConsentPolicy.IsAccepted(" 2026-10-18 "));
+    }
+
+    [Fact]
     public void RefreshToken_StoresOnlyAHash()
     {
         var token = new RefreshToken(Guid.NewGuid(), "raw-token-value", DateTime.UtcNow.AddDays(7));

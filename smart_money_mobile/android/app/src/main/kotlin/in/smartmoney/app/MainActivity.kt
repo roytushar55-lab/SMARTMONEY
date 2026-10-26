@@ -1,4 +1,4 @@
-package com.example.smart_money_mobile
+package `in`.smartmoney.app
 
 import io.flutter.embedding.android.FlutterActivity
 

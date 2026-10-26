@@ -9,12 +9,12 @@ namespace SmartMoney.Application.Common;
 /// </summary>
 public static class ConsentPolicy
 {
-    public const string CurrentVersion = "2026-10-05";
+    public const string CurrentVersion = "2026-10-18";
 
-    // 2026-10-02 stays accepted so app builds that still send the earlier
+    // 2026-10-05 and 2026-10-02 stay accepted so app builds that still send an earlier
     // version keep working.
     private static readonly HashSet<string> AcceptedVersions =
-        new(StringComparer.Ordinal) { CurrentVersion, "2026-10-02" };
+        new(StringComparer.Ordinal) { CurrentVersion, "2026-10-05", "2026-10-02" };
 
     public static bool IsAccepted(string? version)
     {

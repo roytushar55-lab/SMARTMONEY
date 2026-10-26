@@ -142,7 +142,7 @@ Owner to check after a hot restart: the wallet tab with the test user from secti
 **Product and docs**
 - **Closure payout:** the legal documents promise a one-time payout for balances under Rs 250 when an account is closed. The delete flow does not do that, and nothing builds it.
 - **Email notices** for withdrawal events (requested, paid, failed) are not built.
-- **Privacy Policy and Terms still name Cashfree**; update them and the stored consent version (`ConsentPolicy`, currently `2026-10-05`) once a vendor is chosen.
+- **Privacy Policy and Terms still name Cashfree**; update them and the stored consent version (`ConsentPolicy`, currently `2026-10-18`) once a vendor is chosen.
 - **`docs/MILESTONES.md` is stale on M4** (it says blocked); the backend is built, only the vendor is missing.
 - Fee numbers and the Rs 50,000 cap need real values once a vendor and a business decision exist.
 
@@ -156,7 +156,7 @@ Owner to check after a hot restart: the wallet tab with the test user from secti
 ## 8. Environment and gotchas
 
 - **The owner's user secrets contain real values:** a real SMTP config (`Email:Host`), a real super admin (`Seed:SuperAdminEmail`), the DB connection string and the Cuelinks webhook token. Starting the API and registering test users sends **real emails** unless you override. Use **environment variables for that run only** (they beat user secrets), in a `.cmd` file (quoting `set` inside `launch.json` got mangled): `Email__Host=" "` (console OTP sender, codes print to the log), `Email__Password=disabled-for-test` (fail-safe), `Seed__SuperAdminEmail=<throwaway>`, plus any `Payouts__*` or `RateLimiting__*`. See `backend/docs/WITHDRAWAL_MANUAL_TEST.md`.
-- Signup needs `consentVersion` `2026-10-05`.
+- Signup needs `consentVersion` `2026-10-18`.
 - `.claude/launch.json` at the repo root has `smartmoney-admin` (5180), `smartmoney-backend` (7056, `https://localhost:7056`), `smartmoney-mobile` (8088). The preview tool reads `.claude/launch.json` from the session's primary folder. Port 5180 was once reported reserved by Windows; pick another if so.
 - Backend runs at `https://localhost:7056`; Swagger at `/swagger`. In Development CORS allows any origin.
 - Heredocs containing apostrophes break in this shell; write files with the file tool. Python is not installed; Node is.

@@ -1,7 +1,7 @@
 # SmartMoney Privacy Policy
 
-**Last updated:** 5 October 2026
-**Effective date:** 5 October 2026
+**Last updated:** 18 October 2026
+**Effective date:** 18 October 2026
 
 ## 1. Introduction
 
@@ -46,10 +46,9 @@ When SmartMoney's withdrawal feature is available, processing a withdrawal will 
 
 - **UPI ID**
 - **Bank account details** (account number, IFSC code, account holder name), if you choose bank transfer instead of UPI
-- **PAN or other tax information**, where required for tax reporting or compliance with applicable withdrawal thresholds
 - **Withdrawal/payout history** — a record of your withdrawal requests and their status
 
-We only collect the payout details relevant to the payout method you select, and only at the time you request a withdrawal. Once SmartMoney's withdrawal feature is live, these payout details will be processed through **Cashfree**, our payout provider (see Section 7).
+We only collect the payout details relevant to the payout method you select, and only at the time you request a withdrawal. Withdrawals are currently paid **manually** by SmartMoney from its own bank account. Authorised SmartMoney staff can see your payout details while your withdrawal is open, so that they can pay you, and the details are stored in encrypted form. When your withdrawal is settled, we remove the full payout details from our systems and keep only a masked version (for example, the first characters of your UPI ID) and the bank's transaction reference as part of your withdrawal record (see Section 12). We do not currently use a third-party payout provider (see Section 7).
 
 ## 5. Affiliate Tracking
 
@@ -85,7 +84,8 @@ We work with the following third parties to operate SmartMoney:
 
 - **Affiliate network partner(s)** — currently including **Cuelinks**, used to generate affiliate links, route clicks to merchants, and attribute purchases for cashback calculation (see Section 5). SmartMoney's platform is built to support additional affiliate network partners over time; this Policy will be updated to name any newly added partner.
 - **Microsoft Azure** — our cloud hosting, database, and storage provider (Hyderabad, India region), used to run the App's backend, store account and transaction data, and store uploaded content such as profile photos and catalogue media.
-- **Cashfree** — our payout provider, used solely to process withdrawal payouts to your UPI ID or bank account once SmartMoney's withdrawal feature is live. Cashfree is never used to collect payments from you.
+- **Brevo** — our email delivery provider, used to send the verification codes (OTP) and other transactional emails (such as password resets and account notices) to your email address. Brevo receives your email address and the content of those emails only to deliver them.
+- **Our bank and the UPI and bank-transfer payment networks** — because withdrawals are currently paid manually from SmartMoney's own bank account, the bank and the payment networks receive your payee details (name and UPI ID, or account number and IFSC code) only to deliver your payout. SmartMoney does not currently use a third-party payout provider; if that changes, we will name it in this Policy before it goes live.
 
 As of this Policy, SmartMoney does **not** integrate Firebase, third-party analytics, crash-reporting SDKs, or third-party SMS/OTP providers (verification codes are currently sent by email). If we integrate any such service in the future, we will update this Policy before doing so.
 
@@ -95,7 +95,8 @@ We share limited information only where necessary to operate the Service:
 
 - **With our affiliate network partner(s) (currently Cuelinks) and, through them, with merchants** — click and attribution identifiers (Section 5) needed to validate your purchase and calculate cashback. We do not share your name, email, or mobile number with merchants for this purpose unless a specific merchant checkout requires it directly from you.
 - **With our service providers** (e.g., Microsoft Azure for hosting, database, and file storage) — only the information needed for them to perform that specific function on our behalf, under confidentiality and data-protection obligations.
-- **With Cashfree**, our payout provider, once SmartMoney's withdrawal feature is live — the payout details (Section 4) needed to send you your cashback.
+- **With our email delivery provider (Brevo)** — your email address and the content of the transactional emails we send you, only so that they can be delivered.
+- **With our bank and the payment networks** — the payee details (Section 4) needed to deliver your withdrawal to you, and for no other purpose.
 - **With law enforcement or regulators** — where required by applicable law, legal process, or to protect the rights, property, or safety of SmartMoney, our users, or others.
 - **In connection with a business transaction** — such as a merger, acquisition, or asset sale, subject to standard confidentiality protections.
 
@@ -143,11 +144,11 @@ Once these purposes no longer apply, or the 8-year period has elapsed, whichever
 
 ## 13. Account & Data Deletion
 
-You can delete your SmartMoney account in the App by opening your profile, choosing Delete account, and confirming your password. You can also ask us to delete it by contacting admin@smart-money.in.
+You can delete your SmartMoney account in the App by opening your profile, choosing Delete account, and confirming your password. You can also raise a deletion request by emailing admin@smart-money.in from the email address registered on your account. We will reply to confirm the request before we act on it.
 
 When you request deletion:
 
-- Any **confirmed but unpaid cashback or wallet balance** must be withdrawn before your account can be deleted. If your balance is at or above the ₹250 minimum withdrawal amount, we will not process a deletion request while it remains; we will ask you to withdraw it first. If it is below ₹250, we will make a one-time exception and pay it out to you when you close your account, and if it is too small to cover your share of the payout fee it will be cleared on closure. Details are in our [Terms of Service](TERMS_OF_SERVICE.md).
+- **Money in your wallet:** you cannot delete your account **in the App** while there is money in your wallet, meaning confirmed (available) cashback or an amount held for a withdrawal that is still in progress. Withdraw it first, as described in our [Terms of Service](TERMS_OF_SERVICE.md), and then delete your account. If you instead **ask us by email** to delete your account while there is money in your wallet, we will delete it, but **the money in your wallet is forfeited and is not refundable**. Before we do, we will tell you the amount and ask you to confirm. A withdrawal that is already in progress is completed or cancelled first.
 - Any **pending (unconfirmed) cashback** tied to an in-progress merchant transaction may be resolved or forfeited, since it cannot be verified after account closure.
 - When your account is deleted, we delete your profile photo, replace your name, email address and mobile number with anonymised values, and sign you out of every device. We keep a restricted copy of your original name, email address and mobile number for 90 days, visible only to senior administrators, for fraud checks and open disputes, and then delete it. Wallet and transaction records are kept for the period in Section 12, linked only to the anonymised account.
 - We will delete or anonymize your other personal data, except for information we are legally required to retain (e.g., transaction and payout records needed for tax/accounting purposes, or records needed to investigate fraud), as described in Section 12.
