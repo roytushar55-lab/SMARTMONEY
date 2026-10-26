@@ -1,37 +1,51 @@
 <#
 .SYNOPSIS
-  One-time setup that lets the GitHub "Deploy API" workflow deploy to the
-  App Service with OpenID Connect, so no Azure password or publish profile
-  is stored in GitHub.
+  One-time setup that lets the GitHub "Deploy API" workflow deploy one
+  target (UAT from the dev branch, or PROD from main) with OpenID Connect,
+  so no Azure password is stored in GitHub. Run it once per target.
 
 .DESCRIPTION
   Creates (or reuses) a Microsoft Entra app registration and its service
-  principal, trusts GitHub tokens from exactly one repository and one GitHub
-  environment ("production"), and gives it the "Website Contributor" role on
-  the one web app only. Re-running it is safe.
+  principal, trusts GitHub tokens only from the given repository AND branch,
+  and gives it the "Website Contributor" role on that one web app only.
+  The UAT identity therefore cannot touch PROD, and nothing but a push to
+  main can deploy PROD. Re-running it is safe.
 
-  Run after deploy-api.ps1 has created the web app, signed in with an account
-  that can create app registrations and assign roles (the subscription owner).
+  Needs rights to create app registrations and assign roles: run it in the
+  Azure portal's Cloud Shell (PowerShell) as the subscription owner, after
+  deploy-api.ps1 has created the web apps. Upload this file with Cloud
+  Shell's "Manage files > Upload" first.
 
 .EXAMPLE
-  .\setup-github-oidc.ps1 -Repository rupankar/smartmoney `
-      -ResourceGroup smartmoney-prod -WebAppName smartmoney-api-st01
+  ./setup-github-oidc.ps1 -Repository smartmoneyindia/smart-money-app -Branch dev  -WebAppName smartmoney-api-uat
+  ./setup-github-oidc.ps1 -Repository smartmoneyindia/smart-money-app -Branch main -WebAppName smartmoney-api-prod
 #>
 [CmdletBinding()]
 param(
     # "owner/name" of the client's GitHub repository, exactly as on github.com.
     [Parameter(Mandatory)] [ValidatePattern('^[^/\s]+/[^/\s]+$')] [string] $Repository,
-    [Parameter(Mandatory)] [string] $ResourceGroup,
+    [Parameter(Mandatory)] [ValidateSet("dev", "main")] [string] $Branch,
     [Parameter(Mandatory)] [string] $WebAppName,
-    [string] $Environment = "production",
-    [string] $AppRegistrationName = "smartmoney-github-deploy"
+    [string] $ResourceGroup = "smartmoney-rg",
+    [string] $AppRegistrationName
 )
 
 $ErrorActionPreference = "Stop"
+$target = if ($Branch -eq "main") { "PROD" } else { "UAT" }
+if (-not $AppRegistrationName) { $AppRegistrationName = "smartmoney-github-deploy-$($target.ToLowerInvariant())" }
 
+# Runs az and returns its normal output. Judged only by the exit code:
+# Windows PowerShell 5.1 would otherwise treat any az warning on stderr as a
+# fatal error. On failure the stderr text is included in the exception.
 function Invoke-Az {
-    $output = & az @args
-    if ($LASTEXITCODE -ne 0) { throw "az $($args -join ' ') failed (exit $LASTEXITCODE)" }
+    $ErrorActionPreference = "Continue"
+    $all = & az @args --only-show-errors 2>&1
+    $code = $LASTEXITCODE
+    $errors = @($all | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" })
+    $output = @($all | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] })
+    if ($code -ne 0) {
+        throw "az $(($args | Select-Object -First 4) -join ' ') ... failed (exit $code): $($errors -join ' ')"
+    }
     return $output
 }
 
@@ -68,9 +82,9 @@ if (-not (Get-AzQuiet ad sp show --id $appId --query id --output tsv)) {
     Invoke-Az ad sp create --id $appId --output none | Out-Null
 }
 
-# 2. Trust GitHub tokens from this repository's production environment only.
-$subject = "repo:${Repository}:environment:${Environment}"
-$credentialName = "github-" + ($Repository -replace '[^A-Za-z0-9-]', '-') + "-" + $Environment
+# 2. Trust GitHub tokens from this repository's branch only.
+$subject = "repo:${Repository}:ref:refs/heads/${Branch}"
+$credentialName = ("github-" + ($Repository -replace '[^A-Za-z0-9-]', '-') + "-" + $Branch)
 $existing = Get-AzQuiet ad app federated-credential list --id $appId --query "[?subject=='$subject'] | length(@)" --output tsv
 if ($existing -and [int]$existing -gt 0) {
     Write-Host "Federated credential for $subject exists."
@@ -101,12 +115,11 @@ if ($hasRole -and [int]$hasRole -gt 0) {
 }
 
 Write-Host ""
-Write-Host "Done. In GitHub ($Repository): Settings > Environments > New environment '$Environment'" -ForegroundColor Green
-Write-Host "(optionally add yourself as a required reviewer), then Settings > Secrets and variables > Actions > Variables:" -ForegroundColor Green
-Write-Host "  AZURE_CLIENT_ID        = $appId"
-Write-Host "  AZURE_TENANT_ID        = $($account.tenantId)"
-Write-Host "  AZURE_SUBSCRIPTION_ID  = $($account.id)"
-Write-Host "  AZURE_WEBAPP_NAME      = $WebAppName"
-Write-Host "  API_HEALTH_URL         = https://api.smart-money.in/health   (once the domain is connected)"
+Write-Host "Done ($target). Add these in GitHub ($Repository): Settings > Secrets and variables > Actions > Variables:" -ForegroundColor Green
+Write-Host "  AZURE_TENANT_ID             = $($account.tenantId)"
+Write-Host "  AZURE_SUBSCRIPTION_ID       = $($account.id)"
+Write-Host "  AZURE_CLIENT_ID_$target       = $appId"
+Write-Host "  AZURE_WEBAPP_NAME_$target     = $WebAppName"
+Write-Host "  API_HEALTH_URL_$target        = https://$WebAppName.azurewebsites.net/health  (or the custom domain once connected)"
 Write-Host ""
 Write-Host "These are identifiers, not secrets: the trust is limited to $subject."

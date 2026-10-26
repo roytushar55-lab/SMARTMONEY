@@ -82,7 +82,7 @@ DataProtection__CertificatePath + DataProtection__CertificatePassword   (or Data
 ForwardedHeaders__TrustAllProxies=true
 Cors__AllowedOrigins__0=https://<admin web host>
 Storage__Provider=AzureBlob
-AzureBlobStorage__ConnectionString=<from provision.ps1>   (or AzureBlobStorage__AccountUrl with a managed identity)
+BlobStorage__ConnectionString=<from provision.ps1>   (or BlobStorage__AccountUrl with a managed identity)
    (to stay on Supabase instead: Storage__Provider=Supabase plus SupabaseStorage__Url and SupabaseStorage__ServiceRoleKey)
 AffiliateNetworks__Cuelinks__ApiKey                                        (optional; without it the mock affiliate client is used)
 Payouts__Provider=Manual                                                   (default; Fake is refused outside Development)

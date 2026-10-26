@@ -62,15 +62,15 @@ public static class MediaStorageRegistration
         {
             throw new InvalidOperationException(
                 "Storage:Provider is AzureBlob but neither " +
-                "AzureBlobStorage:ConnectionString nor AzureBlobStorage:AccountUrl is set.");
+                "BlobStorage:ConnectionString nor BlobStorage:AccountUrl is set.");
         }
 
         if (string.IsNullOrWhiteSpace(options.ProfilePhotosContainer) ||
             string.IsNullOrWhiteSpace(options.CatalogueContainer))
         {
             throw new InvalidOperationException(
-                "AzureBlobStorage:ProfilePhotosContainer and " +
-                "AzureBlobStorage:CatalogueContainer must both be set.");
+                "BlobStorage:ProfilePhotosContainer and " +
+                "BlobStorage:CatalogueContainer must both be set.");
         }
     }
 

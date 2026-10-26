@@ -1,7 +1,9 @@
 {
   "ASPNETCORE_ENVIRONMENT": "Production",
 
-  "ConnectionStrings__DefaultConnection": "Host=<server>.postgres.database.azure.com;Database=smartmoney;Username=smartmoney_admin;Password=<from provision.ps1>;SSL Mode=Require",
+  "_comment": "Copy to uat.settings.json and prod.settings.json (both git-ignored). Values come from D:/SmartMoney-Secrets/connections-ENV.txt written by provision.ps1. Keys starting with _ are skipped by deploy-api.ps1.",
+
+  "ConnectionStrings__DefaultConnection": "Host=smartmoney-pg.postgres.database.azure.com;Database=smartmoney_ENV;SSL Mode=Require;Search Path=smartmoney;Username=sm_ENV_app;Password=<from connections-ENV.txt>",
 
   "Jwt__SecretKey": "<64 random characters; deploy-api.ps1 -NewJwtKey prints one>",
 
@@ -15,7 +17,7 @@
   "Email__FromName": "SmartMoney",
 
   "Storage__Provider": "AzureBlob",
-  "AzureBlobStorage__ConnectionString": "<from provision.ps1>",
+  "BlobStorage__ConnectionString": "<from provision.ps1>",
 
   "DataProtection__KeysPath": "/home/data-protection-keys",
   "DataProtection__AllowUnencryptedKeys": "true",

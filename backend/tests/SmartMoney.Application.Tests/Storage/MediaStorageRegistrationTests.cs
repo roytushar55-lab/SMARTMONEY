@@ -35,7 +35,7 @@ public sealed class MediaStorageRegistrationTests
     {
         using ServiceProvider provider = Build(Config(
             ("Storage:Provider", "AzureBlob"),
-            ("AzureBlobStorage:ConnectionString", "UseDevelopmentStorage=true")));
+            ("BlobStorage:ConnectionString", "UseDevelopmentStorage=true")));
 
         Assert.IsType<AzureBlobProfilePhotoStorage>(provider.GetRequiredService<IProfilePhotoStorage>());
         Assert.IsType<AzureBlobCatalogueMediaStorage>(provider.GetRequiredService<ICatalogueMediaStorage>());
@@ -47,7 +47,7 @@ public sealed class MediaStorageRegistrationTests
         var exception = Assert.Throws<InvalidOperationException>(
             () => Build(Config(("Storage:Provider", "AzureBlob"))));
 
-        Assert.Contains("AzureBlobStorage:ConnectionString", exception.Message);
+        Assert.Contains("BlobStorage:ConnectionString", exception.Message);
     }
 
     [Fact]

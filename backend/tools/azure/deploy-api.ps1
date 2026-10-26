@@ -10,7 +10,8 @@
     - HTTPS only, Always On (keeps the withdrawal worker running), FTP off,
       health check path /health.
   Every run:
-    - applies the settings from prod.settings.json (secrets; git-ignored);
+    - applies the settings from -SettingsFile (uat.settings.json or
+      prod.settings.json; secrets; git-ignored);
     - dotnet publish -c Release, zip, deploy;
     - waits for GET /health to answer "Healthy".
   With -CustomDomain it also prints the DNS records to add and, once they
@@ -20,13 +21,14 @@
   the resource group.
 
 .EXAMPLE
-  .\deploy-api.ps1 -ResourceGroup smartmoney-prod -AppName smartmoney-api
-  .\deploy-api.ps1 -ResourceGroup smartmoney-prod -AppName smartmoney-api -CustomDomain api.smart-money.in
+  .\deploy-api.ps1 -AppName smartmoney-api-uat  -SettingsFile .\uat.settings.json
+  .\deploy-api.ps1 -AppName smartmoney-api-prod -SettingsFile .\prod.settings.json
+  .\deploy-api.ps1 -AppName smartmoney-api-prod -SettingsFile .\prod.settings.json -CustomDomain api.smart-money.in -SkipCode
   .\deploy-api.ps1 -NewJwtKey      # just prints a random JWT signing key
 #>
 [CmdletBinding(DefaultParameterSetName = "Deploy")]
 param(
-    [Parameter(Mandatory, ParameterSetName = "Deploy")] [string] $ResourceGroup,
+    [Parameter(ParameterSetName = "Deploy")] [string] $ResourceGroup = "smartmoney-rg",
     # Globally unique; becomes <AppName>.azurewebsites.net.
     [Parameter(Mandatory, ParameterSetName = "Deploy")] [string] $AppName,
     [Parameter(ParameterSetName = "Deploy")] [string] $Location = "centralindia",
@@ -50,9 +52,18 @@ if ($NewJwtKey) {
     return
 }
 
+# Runs az and returns its normal output. Judged only by the exit code:
+# Windows PowerShell 5.1 would otherwise treat any az warning on stderr as a
+# fatal error. On failure the stderr text is included in the exception.
 function Invoke-Az {
-    $output = & az @args
-    if ($LASTEXITCODE -ne 0) { throw "az $($args -join ' ') failed (exit $LASTEXITCODE)" }
+    $ErrorActionPreference = "Continue"
+    $all = & az @args --only-show-errors 2>&1
+    $code = $LASTEXITCODE
+    $errors = @($all | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" })
+    $output = @($all | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] })
+    if ($code -ne 0) {
+        throw "az $(($args | Select-Object -First 4) -join ' ') ... failed (exit $code): $($errors -join ' ')"
+    }
     return $output
 }
 
@@ -105,10 +116,10 @@ Invoke-Az webapp config set --resource-group $ResourceGroup --name $AppName `
 # 2. App settings
 if (-not $SkipSettings) {
     if (-not (Test-Path $SettingsFile)) {
-        throw "Settings file $SettingsFile not found. Copy prod.settings.example.json to prod.settings.json and fill it in."
+        throw "Settings file $SettingsFile not found. Copy prod.settings.example.json to uat.settings.json / prod.settings.json and fill it in."
     }
     $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
-    $placeholders = @($settings.PSObject.Properties | Where-Object { "$($_.Value)" -match '<[^>]+>' } | ForEach-Object Name)
+    $placeholders = @($settings.PSObject.Properties | Where-Object { -not $_.Name.StartsWith("_") -and "$($_.Value)" -match '<[^>]+>' } | ForEach-Object Name)
     $optional = @("AffiliateNetworks__Cuelinks__ApiKey", "AffiliateNetworks__Cuelinks__ChannelId")
     $missing = @($placeholders | Where-Object { $_ -notin $optional })
     if ($missing.Count -gt 0) {
@@ -118,6 +129,7 @@ if (-not $SkipSettings) {
     $list = @()
     foreach ($p in $settings.PSObject.Properties) {
         if ($p.Name -in $placeholders) { continue }   # optional and still a placeholder: skip
+        if ($p.Name.StartsWith("_")) { continue }      # comments in the settings file
         $list += @{ name = $p.Name; value = "$($p.Value)"; slotSetting = $false }
     }
     if ($CustomDomain) {
@@ -146,7 +158,23 @@ if (-not $SkipCode) {
         Write-Host "dotnet publish -c Release..."
         & dotnet publish $project -c Release -o $publish --nologo -v q
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
-        Compress-Archive -Path (Join-Path $publish "*") -DestinationPath $zip
+        # Not Compress-Archive: on Windows PowerShell 5.1 it stores paths with
+        # backslashes, which App Service on Linux cannot unpack (rsync fails).
+        Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+        # EnumerateFiles keeps the exact prefix it was given (short 8.3 temp
+        # paths included), so cutting it off yields the relative path.
+        $publishRoot = $publish.TrimEnd('\') + '\'
+        $archive = [IO.Compression.ZipFile]::Open($zip, [IO.Compression.ZipArchiveMode]::Create)
+        try {
+            foreach ($path in [IO.Directory]::EnumerateFiles($publishRoot, '*', [IO.SearchOption]::AllDirectories)) {
+                $entryName = $path.Substring($publishRoot.Length).Replace('\', '/')
+                [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                    $archive, $path, $entryName, [IO.Compression.CompressionLevel]::Optimal)
+            }
+        }
+        finally {
+            $archive.Dispose()
+        }
         Write-Host "Deploying $([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB..."
         Invoke-Az webapp deploy --resource-group $ResourceGroup --name $AppName `
             --src-path $zip --type zip --async false --output none
@@ -197,12 +225,16 @@ if ($CustomDomain) {
     }
 
     Write-Host "Creating the free managed certificate for $CustomDomain..."
-    $thumb = Get-AzQuiet webapp config ssl list --resource-group $ResourceGroup `
-        --query "[?subjectName=='$CustomDomain'].thumbprint | [0]" --output tsv
-    if (-not $thumb) {
+    # "ssl create" is idempotent. The first call for a new domain can return an empty
+    # body while the certificate is issued, so ask again until a thumbprint comes back.
+    # Newer Azure CLI versions return certificate fields under "properties".
+    $thumb = $null
+    for ($attempt = 1; $attempt -le 10 -and -not $thumb; $attempt++) {
+        if ($attempt -gt 1) { Start-Sleep -Seconds 30 }
         $thumb = Invoke-Az webapp config ssl create --resource-group $ResourceGroup --name $AppName `
-            --hostname $CustomDomain --query thumbprint --output tsv
+            --hostname $CustomDomain --query "thumbprint || properties.thumbprint" --output tsv
     }
+    if (-not $thumb) { throw "No managed certificate thumbprint found for $CustomDomain." }
     Invoke-Az webapp config ssl bind --resource-group $ResourceGroup --name $AppName `
         --certificate-thumbprint $thumb --ssl-type SNI --output none
     Write-Host "Bound https://$CustomDomain" -ForegroundColor Green

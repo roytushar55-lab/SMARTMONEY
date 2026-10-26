@@ -42,8 +42,9 @@ admin/android/key.properties
 # Supabase -> Azure migration working folder (database dump, downloaded images).
 .migration/
 
-# Production secrets for tools/azure/deploy-api.ps1. Only the .example file is committed.
+# UAT and PROD secrets for tools/azure/deploy-api.ps1. Only the .example file is committed.
 backend/tools/azure/prod.settings.json
+backend/tools/azure/uat.settings.json
 
 # From the client repository template (Android)
 # Gradle files

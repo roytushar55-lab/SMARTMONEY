@@ -1,127 +1,107 @@
-# Moving the database and images to Azure
+# SmartMoney on Azure: UAT and PROD
 
-The API talks to PostgreSQL through EF Core and Npgsql, so Azure Database for
-PostgreSQL needs no code change: only the connection string moves. Images
-(profile photos and admin-uploaded catalogue media) now have an Azure Blob
-Storage implementation next to the Supabase one, chosen by `Storage:Provider`.
+Built on 23 October 2026. Supabase is retired: the data and images were
+copied into Azure and Supabase is no longer used by any environment.
 
-Everything below runs from your machine with the Azure CLI; nothing is
-automatic on deploy.
+## 1. What exists
 
-## 0. What changed in the code
+All in resource group `smartmoney-rg`, Central India, subscription
+"Azure subscription 1" (a free trial until 17 November 2026: upgrade to
+pay-as-you-go before then or everything stops).
 
-| Piece | Where |
+| Piece | UAT | PROD | Shared |
+|---|---|---|---|
+| API (App Service, Linux, .NET 10) | `smartmoney-api-uat` | `smartmoney-api-prod` | plan `smartmoney-plan` (B1) |
+| Address | `smartmoney-api-uat.azurewebsites.net` (later `uat-api.smart-money.in`) | `smartmoney-api-prod.azurewebsites.net` (later `api.smart-money.in`) | |
+| Database | `smartmoney_uat` | `smartmoney_prod` | server `smartmoney-pg` (PostgreSQL 17, Burstable B1ms, 32 GB, 7-day backups) |
+| Database logins | `sm_uat_owner`, `sm_uat_app` | `sm_prod_owner`, `sm_prod_app` | admin `smartmoney_admin` (setup only) |
+| Images (blob storage) | `smartmoneymediauat` | `smartmoneymediaprod` | containers `profile-images`, `catalogue-media` (public read of single files) |
+
+Approximate cost: ₹1,261 (plan) + ₹1,717 (database compute) + ₹300-400
+(database storage) + a few rupees of blob storage a month. UAT adds almost
+nothing because it shares the plan and the database server.
+
+### Database rules (backend/tools/azure/setup-database.sql)
+
+- Tables live in schema `smartmoney`, not `public`. Connection strings set
+  `Search Path=smartmoney`; no code change was needed.
+- `sm_<env>_owner` owns the tables and is used only for migrations.
+- `sm_<env>_app` is what the API uses: read and write rows only (no
+  `CREATE`, `DROP`, `ALTER` or `TRUNCATE`).
+- Each database accepts only its own environment's two logins.
+- The server has public network access on, but the firewall allows only
+  Azure services (the web apps) and the operator's IP (`AllowOperatorIp`).
+  Update that rule when your IP changes:
+  `.\provision.ps1 -MyPublicIp (Invoke-RestMethod https://api.ipify.org) -SkipDatabaseSetup`.
+
+### Secrets
+
+Everything secret lives in `D:\SmartMoney-Secrets` (outside the repo):
+admin and per-login passwords, `connections-uat.txt` and
+`connections-prod.txt` (API and owner connection strings, storage connection
+string), `jwt-<env>.txt`, `cuelinks-token-<env>.txt`, `brevo-smtp-key.txt`.
+Move them into a password manager. The settings files
+`backend/tools/azure/uat.settings.json` and `prod.settings.json` are made from
+them by `write-settings.ps1` and are git-ignored.
+
+## 2. Signing in from the dev PC
+
+The tenant's Security Defaults block `az login` for the owner account
+(AADSTS530035), so scripts use a service principal with Contributor rights:
+
+```powershell
+$env:SM_SP_SECRET = Read-Host "Service principal password"
+az login --service-principal --username <appId> --password $env:SM_SP_SECRET --tenant 96ed315f-9a63-40d4-8136-1c0a266e6f1d
+```
+
+Contributor cannot create app registrations or assign roles: run
+`setup-github-oidc.ps1` in the Azure portal's Cloud Shell as the owner.
+
+## 3. Scripts (backend/tools/azure)
+
+| Script | Does |
 |---|---|
-| Provider switch (`Supabase`, default, or `AzureBlob`) | `src/SmartMoney.Api/Storage/MediaStorageRegistration.cs` |
-| Azure settings (`AzureBlobStorage:*`) | `src/SmartMoney.Api/Storage/AzureBlobStorageOptions.cs`, defaults in `appsettings.json` |
-| Blob upload, public URL, delete-by-URL | `AzureBlobObjectStore.cs`, wrapped by `AzureBlobProfilePhotoStorage.cs` and `AzureBlobCatalogueMediaStorage.cs` |
-| Liveness probe | `GET /health` returns `200 Healthy` (no database check, on purpose) |
-| Scripts | `tools/azure/provision.ps1`, `tools/azure/migrate-from-supabase.ps1`, `tools/azure/copy-supabase-media.mjs` |
+| `provision.ps1` | Resource group, database server, both databases with logins and schema, both storage accounts. Re-runnable. |
+| `migrate-from-supabase.ps1 -Environment uat\|prod` | Copied Supabase into an environment: tables into `smartmoney`, refresh tokens and stale codes dropped, test accounts off in prod, row counts checked, images copied, URLs rewritten. Kept for reference; Supabase is retired. |
+| `write-settings.ps1 -Environment uat\|prod -AdminEmail <email>` | Builds the git-ignored settings file from the secrets folder. |
+| `deploy-api.ps1 -AppName smartmoney-api-<env> -SettingsFile .\<env>.settings.json` | Creates the web app if needed, applies settings, builds, deploys, waits for `/health`. `-SkipSettings` / `-SkipCode` to do one half. `-CustomDomain <host>` binds a domain with a free certificate. |
+| `setup-github-oidc.ps1 -Branch dev\|main -WebAppName ...` | One-time GitHub-to-Azure trust per environment (run in Cloud Shell). |
 
-Packages added to the API project: `Azure.Storage.Blobs`, `Azure.Identity`.
+## 4. Deploying
 
-Both containers are created with anonymous **blob** read access, the same
-model as Supabase's public buckets: anyone with a URL can read an image,
-nobody can list or write. Uploads use a connection string or, better on App
-Service, the system-assigned managed identity with the
-"Storage Blob Data Contributor" role (then set `AzureBlobStorage:AccountUrl`
-and leave `ConnectionString` empty).
+Normal path (GitHub Actions, `.github/workflows/deploy-api.yml`):
 
-## 1. Create the resources
+- pull request into `dev`, merged: UAT deploys;
+- pull request from `dev` into `main`, merged: PROD deploys.
 
-```powershell
-az login
-az account set --subscription "<subscription name or id>"
-cd backend\tools\azure
-.\provision.ps1 -ResourceGroup smartmoney-prod -Location centralindia `
-    -PostgresServerName smartmoney-pg -StorageAccountName smartmoneymedia `
-    -MyPublicIp (Invoke-RestMethod https://api.ipify.org)
-```
-
-It creates (and skips what already exists):
-
-- resource group;
-- PostgreSQL flexible server, version 17, Burstable `Standard_B1ms`, 32 GB,
-  7-day backups, public network with a firewall rule for Azure services and
-  one for your IP; database `smartmoney`;
-- StorageV2 account, LRS, HTTPS only, TLS 1.2, with containers
-  `profile-images` and `catalogue-media` (public read of blobs).
-
-It prints the two connection strings and the App Service settings. Nothing
-is written to disk; store the passwords in your password manager.
-
-Cost at launch sizing is roughly the B1ms server plus a few rupees of
-storage; stop the server with `az postgres flexible-server stop` while not
-in use (it auto-starts after 7 days).
-
-## 2. Copy the data
-
-Take the API offline first, or accept that rows written after the dump are
-left behind. Then:
+The free GitHub plan cannot block direct pushes, so always use pull
+requests. Database migrations are not run by the workflow: apply them with
+the owner login, UAT first, before merging code that needs them:
 
 ```powershell
-.\migrate-from-supabase.ps1 `
-  -SourceConnection "postgresql://postgres.<ref>:<pw>@aws-1-ap-south-1.pooler.supabase.com:5432/postgres" `
-  -TargetConnection "postgresql://smartmoney_admin:<pw>@smartmoney-pg.postgres.database.azure.com:5432/smartmoney?sslmode=require" `
-  -SupabaseUrl "https://<ref>.supabase.co" -SupabaseServiceRoleKey "<service role key>" `
-  -StorageAccountName smartmoneymedia
+dotnet ef database update --project src/SmartMoney.Infrastructure --startup-project src/SmartMoney.Api `
+  --connection "<owner connection string from connections-<env>.txt>"
 ```
 
-Steps, each resumable with `-SkipDump`, `-SkipRestore`, `-SkipMedia`,
-`-SkipUrlRewrite`:
+Manual path (same result, from the dev PC): `deploy-api.ps1` as above.
 
-1. `pg_dump` of the `public` schema only (Supabase's `auth`, `storage` and
-   other schemas are not ours), custom format, no owners or grants.
-2. `pg_restore` into the empty Azure database. The `__EFMigrationsHistory`
-   table comes with it, so `dotnet ef database update` afterwards is a no-op;
-   future migrations apply normally.
-3. Row counts for every table, Supabase vs Azure; stops on any difference.
-4. Downloads every object from both buckets (`copy-supabase-media.mjs`, no
-   dependencies) into `.migration/media/<bucket>/...` and uploads them with
-   `az storage blob upload-batch`, same paths. Your `az login` account needs
-   "Storage Blob Data Contributor" on the account for this step.
-5. Rewrites the six URL columns (`Users.ProfileImageUrl`, `Stores.LogoUrl`,
-   `Stores.BannerUrl`, `Offers.ImageUrl`, `Categories.IconUrl`,
-   `Banners.ImageUrl`) from
-   `https://<ref>.supabase.co/storage/v1/object/public/<bucket>/...` to
-   `https://smartmoneymedia.blob.core.windows.net/<bucket>/...` in one
-   transaction, and reports how many profile photos still point at Supabase
-   (should be 0).
+Changing a setting: edit the secrets or run `write-settings.ps1`, then
+`deploy-api.ps1 ... -SkipCode`.
 
-Images served from the API's own `wwwroot/media` are not affected; they
-deploy with the app.
+## 5. Problems met while building it (and the fixes now in the scripts)
 
-The working folder `.migration/` at the repo root is git-ignored. Delete it
-once you are happy; it contains a full copy of the database.
+| Symptom | Cause | Fix |
+|---|---|---|
+| `az` warnings made PowerShell 5.1 stop | Redirected stderr becomes a terminating error | `Invoke-Az` judges only by the exit code |
+| "the following arguments are required: --server-name" | Azure CLI 2.90 renamed arguments | Firewall and database commands use `--server-name` / `--name` |
+| "Firewall rule operations are not supported for a server without public access" | `--public-access None` now creates the server with public access disabled | `provision.ps1` switches public access on (still limited by the firewall) |
+| App setting rejected: "AppSetting with name 'AzureBlobStorage__ConnectionString' is not allowed" | App Service reserves names starting with `AzureBlobStorage` | Config section renamed to `BlobStorage` |
+| Zip deploy failed in rsync (Kudu 400) | PowerShell 5.1 `Compress-Archive` writes backslash paths | `deploy-api.ps1` builds the zip with forward slashes |
+| Settings arrived as `@{value=...; PSPath=...}` | `Get-Content` lines carry hidden properties into `ConvertTo-Json` | `write-settings.ps1` splits the raw file text |
 
-## 3. Point the API at Azure
+## 6. Local development
 
-App Service settings (or Key Vault references):
-
-```
-ConnectionStrings__DefaultConnection = Host=smartmoney-pg.postgres.database.azure.com;Database=smartmoney;Username=smartmoney_admin;Password=<pw>;SSL Mode=Require
-Storage__Provider                    = AzureBlob
-AzureBlobStorage__ConnectionString   = <from provision.ps1>
-      or
-AzureBlobStorage__AccountUrl         = https://smartmoneymedia.blob.core.windows.net   (managed identity)
-```
-
-Locally, the same keys as user secrets (`dotnet user-secrets set
-"Storage:Provider" "AzureBlob"` and so on) switch a dev machine over; leave
-them unset to keep using Supabase.
-
-Then restart, open `/health` (expect `Healthy`), sign in, open a store with
-a logo (loads from the blob URL), upload a profile photo (lands in
-`profile-images`), and upload a store logo from the admin app (lands in
-`catalogue-media`).
-
-## 4. Afterwards
-
-- Keep Supabase read-only for a week, then delete the project so the old
-  URLs stop working on purpose rather than silently.
-- Set the App Service health check path to `/health`.
-- Consider a CDN or custom domain (`media.smart-money.in`) in front of the
-  storage account; set `AzureBlobStorage:PublicBaseUrl` to it and re-run the
-  URL rewrite step with `-AzurePublicBaseUrl`.
-- The privacy policy already names Azure as the hosting provider; no change
-  needed there for storage.
+The API's user secrets on the dev PC still point at the old Supabase
+database. Point them at the UAT database (with the UAT app login and this
+PC's IP in the firewall) or at a local PostgreSQL instead; Supabase will be
+shut down.

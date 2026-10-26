@@ -9,7 +9,7 @@ namespace SmartMoney.Api.Storage;
 /// </summary>
 public sealed class AzureBlobStorageOptions
 {
-    public const string SectionName = "AzureBlobStorage";
+    public const string SectionName = "BlobStorage";
 
     /// <summary>Full storage connection string. Wins over <see cref="AccountUrl"/> when set.</summary>
     public string ConnectionString { get; init; } = string.Empty;

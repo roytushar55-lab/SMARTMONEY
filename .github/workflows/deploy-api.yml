@@ -1,25 +1,31 @@
-# Deploys the API to Azure App Service on every push to main that touches
-# the backend (a merged pull request), or on demand from the Actions tab.
+# Deploys the API when a pull request is merged:
+#   merged into dev  -> UAT   (smartmoney-api-uat)
+#   merged into main -> PROD  (smartmoney-api-prod)
+# Flow: feature branch -> PR into dev (CI runs) -> merge -> UAT deploys ->
+# test on UAT -> PR dev into main (CI runs) -> merge -> PROD deploys.
 #
-# A push to main IS a production deploy. Work on branches and merge through
-# pull requests, where the CI workflow runs first.
+# A push to dev or main deploys too (the free GitHub plan cannot block direct
+# pushes), so always go through pull requests.
 #
-# Signs in to Azure with OpenID Connect: no Azure password or publish profile
-# is stored in GitHub. One-time setup: backend/tools/azure/setup-github-oidc.ps1,
-# then add these in GitHub > Settings > Secrets and variables > Actions >
+# Signs in to Azure with OpenID Connect, one identity per target: the UAT
+# identity trusts only the dev branch and can deploy only the UAT app; the
+# PROD identity trusts only main and can deploy only the PROD app. No Azure
+# password is stored in GitHub. One-time setup: setup-github-oidc.ps1 (run
+# twice), then add these under Settings > Secrets and variables > Actions >
 # Variables:
-#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID  (printed by the script)
-#   AZURE_WEBAPP_NAME                                         e.g. smartmoney-api-st01
-#   API_HEALTH_URL (optional)                                 e.g. https://api.smart-money.in/health
+#   AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+#   AZURE_CLIENT_ID_UAT,  AZURE_WEBAPP_NAME_UAT,  API_HEALTH_URL_UAT
+#   AZURE_CLIENT_ID_PROD, AZURE_WEBAPP_NAME_PROD, API_HEALTH_URL_PROD
 #
 # App settings and secrets stay in App Service (deploy-api.ps1 -SkipCode);
 # this workflow only ships code. Database migrations are NOT run here: apply
-# them by hand before merging a change that needs one (Azure guide, Step 11).
+# them by hand with the owner login, UAT first, before merging.
 name: Deploy API
 
 on:
   push:
     branches:
+      - dev
       - main
     paths:
       - "backend/src/**"
@@ -31,9 +37,9 @@ on:
 permissions:
   contents: read
 
-# Never run two deploys at once, and never cancel one half way.
+# One deploy per target at a time, never cancelled half way.
 concurrency:
-  group: deploy-api-production
+  group: deploy-api-${{ github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -44,6 +50,7 @@ env:
 jobs:
   build:
     name: Test and publish
+    if: github.ref_name == 'dev' || github.ref_name == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -73,35 +80,49 @@ jobs:
           retention-days: 14
 
   deploy:
-    name: Deploy to App Service
+    name: Deploy to ${{ github.ref_name == 'main' && 'PROD' || 'UAT' }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # The "production" environment can require an approval before each
-    # deploy (GitHub > Settings > Environments). The Azure sign-in trusts
-    # exactly this environment.
-    environment:
-      name: production
-      url: ${{ vars.API_HEALTH_URL || format('https://{0}.azurewebsites.net/health', vars.AZURE_WEBAPP_NAME) }}
     permissions:
       id-token: write
       contents: read
     steps:
-      - name: Check configuration
+      - name: Choose target
+        id: target
+        env:
+          REF: ${{ github.ref_name }}
+          TENANT: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          UAT_CLIENT: ${{ vars.AZURE_CLIENT_ID_UAT }}
+          UAT_APP: ${{ vars.AZURE_WEBAPP_NAME_UAT }}
+          UAT_HEALTH: ${{ vars.API_HEALTH_URL_UAT }}
+          PROD_CLIENT: ${{ vars.AZURE_CLIENT_ID_PROD }}
+          PROD_APP: ${{ vars.AZURE_WEBAPP_NAME_PROD }}
+          PROD_HEALTH: ${{ vars.API_HEALTH_URL_PROD }}
         run: |
+          case "$REF" in
+            main) name=PROD; client="$PROD_CLIENT"; app="$PROD_APP"; health="$PROD_HEALTH" ;;
+            dev)  name=UAT;  client="$UAT_CLIENT";  app="$UAT_APP";  health="$UAT_HEALTH" ;;
+            *)    echo "::error::Deploys run only from dev (UAT) or main (PROD), not '$REF'."; exit 1 ;;
+          esac
           missing=""
-          for name in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_WEBAPP_NAME; do
-            [ -z "${!name}" ] && missing="$missing $name"
-          done
+          [ -z "$TENANT" ] && missing="$missing AZURE_TENANT_ID"
+          [ -z "$SUBSCRIPTION" ] && missing="$missing AZURE_SUBSCRIPTION_ID"
+          [ -z "$client" ] && missing="$missing AZURE_CLIENT_ID_$name"
+          [ -z "$app" ] && missing="$missing AZURE_WEBAPP_NAME_$name"
           if [ -n "$missing" ]; then
             echo "::error::Missing GitHub Actions variables:$missing (see the top of deploy-api.yml)"
             exit 1
           fi
-        env:
-          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+          [ -z "$health" ] && health="https://$app.azurewebsites.net/health"
+          {
+            echo "name=$name"
+            echo "client=$client"
+            echo "app=$app"
+            echo "health=$health"
+          } >> "$GITHUB_OUTPUT"
+          echo "Deploying $REF to $name ($app)"
 
       - uses: actions/download-artifact@v4
         with:
@@ -111,32 +132,31 @@ jobs:
       - name: Sign in to Azure (OpenID Connect)
         uses: azure/login@v2
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          client-id: ${{ steps.target.outputs.client }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          app-name: ${{ steps.target.outputs.app }}
           package: api
 
       - name: Wait for /health
+        env:
+          URL: ${{ steps.target.outputs.health }}
+          APP: ${{ steps.target.outputs.app }}
         run: |
-          url="${API_HEALTH_URL:-https://${AZURE_WEBAPP_NAME}.azurewebsites.net/health}"
           for i in $(seq 1 30); do
-            body=$(curl -fsS --max-time 20 "$url" || true)
+            body=$(curl -fsS --max-time 20 "$URL" || true)
             if [ "$body" = "Healthy" ]; then
-              echo "Healthy: $url"
+              echo "Healthy: $URL"
               exit 0
             fi
             sleep 10
           done
-          echo "::error::$url did not answer Healthy within 5 minutes. Check: az webapp log tail -g <resource group> -n $AZURE_WEBAPP_NAME"
+          echo "::error::$URL did not answer Healthy within 5 minutes. Check: az webapp log tail -g smartmoney-rg -n $APP"
           exit 1
-        env:
-          API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
-          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
 
       - name: Sign out
         if: always()

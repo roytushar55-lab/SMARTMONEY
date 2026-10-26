@@ -1,173 +1,292 @@
 <#
 .SYNOPSIS
-  Copies the SmartMoney database from Supabase to Azure Database for
-  PostgreSQL, uploads the images to Azure Blob Storage, and rewrites the
-  stored image URLs to point at Azure.
+  Copies the SmartMoney data from Supabase into one Azure environment (uat
+  or prod): tables into the "smartmoney" schema owned by that environment's
+  owner login, a data clean-up, grants for the app login, row-count checks,
+  the images from Supabase Storage into the environment's blob storage, and
+  the image URLs rewritten to Azure.
 
 .DESCRIPTION
-  Steps, each skippable with a switch so a failed run can be resumed:
-    1. pg_dump the public schema from Supabase (custom format, no owners or
-       grants, so it restores cleanly under the Azure admin user).
-    2. pg_restore it into the empty Azure database.
-    3. Compare row counts for every table.
-    4. Download every object in the two Supabase buckets (node
-       copy-supabase-media.mjs) and upload them with az storage blob
-       upload-batch.
-    5. Rewrite the six image-URL columns from the Supabase public URL prefix
-       to the Azure one.
+  Run provision.ps1 first. Then:
+    .\migrate-from-supabase.ps1 -Environment uat
+    .\migrate-from-supabase.ps1 -Environment prod
 
-  Nothing is changed in Supabase. Take the app offline (or accept that rows
-  written after the dump are not copied) before running against production.
+  Steps:
+    1. pg_dump Supabase's public schema once (cached in .migration\, git-ignored).
+       Supabase's own schemas (auth, storage, realtime, vault) are not copied.
+    2. Restore as the owner login, then move every table into "smartmoney".
+    3. Clean up: drop all refresh tokens (everyone signs in again on the new
+       server), used or expired one-time codes, and legacy /uploads/ photo
+       paths; in prod also switch off the example.com and test.local accounts.
+    4. Grant the app login read/write on the tables.
+    5. Compare row counts with Supabase.
+    6. Copy the Supabase Storage objects (public buckets, so no Supabase key
+       is needed) to the environment's storage account and rewrite URLs.
+    7. Check EF's migration history matches the latest migration in the code.
 
-  Needs: PostgreSQL client tools (pg_dump, pg_restore, psql), Azure CLI
-  signed in, Node 18+ for the media copy.
+  Nothing in Supabase is changed. Rows written to Supabase after the dump
+  are not copied, so stop using Supabase before the prod run.
 
-.EXAMPLE
-  .\migrate-from-supabase.ps1 `
-    -SourceConnection "postgresql://postgres.<ref>:<pw>@aws-1-ap-south-1.pooler.supabase.com:5432/postgres" `
-    -TargetConnection "postgresql://smartmoney_admin:<pw>@smartmoney-pg.postgres.database.azure.com:5432/smartmoney?sslmode=require" `
-    -SupabaseUrl "https://<ref>.supabase.co" -SupabaseServiceRoleKey "<service role key>" `
-    -StorageAccountName smartmoneymedia
+  Needs: PostgreSQL client tools 16+, Azure CLI signed in (Contributor is
+  enough: blob uploads use the storage account key), the API's user secret
+  ConnectionStrings:DefaultConnection pointing at Supabase (or -SourceConnection).
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)] [string] $SourceConnection,
-    [Parameter(Mandatory)] [string] $TargetConnection,
+    [Parameter(Mandatory)] [ValidateSet("uat", "prod")] [string] $Environment,
 
-    [string] $SupabaseUrl,
-    [string] $SupabaseServiceRoleKey,
-    [string] $StorageAccountName,
-    [string] $ProfilePhotosContainer = "profile-images",
-    [string] $CatalogueContainer = "catalogue-media",
-    # Set when a CDN or custom domain fronts the storage account.
-    [string] $AzurePublicBaseUrl,
+    [string] $ResourceGroup = "smartmoney-rg",
+    [string] $PostgresServerName = "smartmoney-pg",
+    [string] $PostgresAdminUser = "smartmoney_admin",
+    [string] $StoragePrefix = "smartmoneymedia",
+    [string] $SecretsDir = "D:\SmartMoney-Secrets",
+
+    # Npgsql-style Supabase connection string. Default: the API's user secret.
+    [string] $SourceConnection,
 
     [string] $PgBinDir = "C:\Program Files\PostgreSQL\18\bin",
     [string] $WorkDir = (Join-Path $PSScriptRoot "..\..\..\.migration"),
 
-    [switch] $SkipDump,
-    [switch] $SkipRestore,
-    [switch] $SkipMedia,
-    [switch] $SkipUrlRewrite
+    # Take a new dump instead of reusing the cached one.
+    [switch] $FreshDump,
+    # Drop the tables already in the target (only before go-live!).
+    [switch] $ResetTarget,
+    [switch] $SkipMedia
 )
 
 $ErrorActionPreference = "Stop"
+# Windows PowerShell 5.1 may default to old TLS versions; Supabase needs 1.2+.
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+# psql and pg_restore must not see a UTF-8 byte-order mark.
+$Utf8NoBom = New-Object Text.UTF8Encoding($false)
 $pgDump = Join-Path $PgBinDir "pg_dump.exe"
 $pgRestore = Join-Path $PgBinDir "pg_restore.exe"
 $psql = Join-Path $PgBinDir "psql.exe"
 foreach ($tool in @($pgDump, $pgRestore, $psql)) {
-    if (-not (Test-Path $tool)) { throw "Missing $tool. Set -PgBinDir to your PostgreSQL bin folder." }
+    if (-not (Test-Path $tool)) { throw "Missing $tool. Set -PgBinDir." }
+}
+
+# Runs az and returns its normal output. Judged only by the exit code:
+# Windows PowerShell 5.1 would otherwise treat any az warning on stderr as a
+# fatal error. On failure the stderr text is included in the exception.
+function Invoke-Az {
+    $ErrorActionPreference = "Continue"
+    $all = & az @args --only-show-errors 2>&1
+    $code = $LASTEXITCODE
+    $errors = @($all | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" })
+    $output = @($all | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] })
+    if ($code -ne 0) {
+        throw "az $(($args | Select-Object -First 4) -join ' ') ... failed (exit $code): $($errors -join ' ')"
+    }
+    return $output
+}
+
+# "Host=..;Database=..;Username=..;Password=.." -> hashtable (lower-case keys)
+function ConvertFrom-NpgsqlConnection([string] $Value) {
+    $kv = @{}
+    foreach ($part in $Value.Split(';')) {
+        if ($part -match '^\s*([^=]+?)\s*=\s*(.*)$') { $kv[$Matches[1].ToLowerInvariant()] = $Matches[2] }
+    }
+    return $kv
+}
+
+# libpq connection string without the password (it travels in PGPASSWORD).
+function Get-ConnInfo($kv) {
+    $port = if ($kv['port']) { $kv['port'] } else { '5432' }
+    return "host=$($kv['host']) port=$port dbname=$($kv['database']) user=$($kv['username']) sslmode=require connect_timeout=15"
+}
+
+# Runs psql against a connection hashtable; returns stdout lines.
+function Invoke-Psql($kv, [string[]] $PsqlArgs) {
+    $env:PGPASSWORD = $kv['password']
+    try {
+        $out = & $psql (Get-ConnInfo $kv) -X -q -v ON_ERROR_STOP=1 @PsqlArgs
+        if ($LASTEXITCODE -ne 0) { throw "psql failed against $($kv['host'])/$($kv['database'])" }
+        return $out
+    }
+    finally { $env:PGPASSWORD = $null }
+}
+
+function Invoke-Sql($kv, [string] $Sql) {
+    $file = Join-Path $WorkDir ("step-" + [guid]::NewGuid().ToString('N') + ".sql")
+    [IO.File]::WriteAllText($file, $Sql, $Utf8NoBom)
+    try { return Invoke-Psql $kv @('-At', '-f', $file) }
+    finally { Remove-Item $file -Force }
 }
 
 New-Item -ItemType Directory -Force $WorkDir | Out-Null
 $WorkDir = (Resolve-Path $WorkDir).Path
-$dumpFile = Join-Path $WorkDir "smartmoney-public.dump"
-$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
-# 1. Dump
-if (-not $SkipDump) {
-    Write-Host "1/5 Dumping public schema from Supabase to $dumpFile ..." -ForegroundColor Cyan
-    & $pgDump --dbname=$SourceConnection --schema=public --format=custom `
-        --no-owner --no-privileges --no-comments --file=$dumpFile
-    if ($LASTEXITCODE -ne 0) { throw "pg_dump failed" }
-    Write-Host "    $((Get-Item $dumpFile).Length / 1MB) MB"
+# Connections
+if (-not $SourceConnection) {
+    $SourceConnection = (& dotnet user-secrets list --project (Join-Path $PSScriptRoot "..\..\src\SmartMoney.Api") |
+        Where-Object { $_ -like 'ConnectionStrings:DefaultConnection*' }) -replace '^ConnectionStrings:DefaultConnection = ', ''
+    if (-not $SourceConnection) { throw "No -SourceConnection and no user secret ConnectionStrings:DefaultConnection." }
 }
+$source = ConvertFrom-NpgsqlConnection $SourceConnection
+if ($source['username'] -notmatch '^postgres\.(?<ref>[a-z0-9]+)$') { throw "Source does not look like a Supabase pooler login (postgres.<project ref>)." }
+$supabaseRef = $Matches['ref']
 
-# 2. Restore
-if (-not $SkipRestore) {
-    Write-Host "2/5 Restoring into Azure ..." -ForegroundColor Cyan
-    $existing = & $psql --dbname=$TargetConnection --tuples-only --no-align `
-        --command "select count(*) from information_schema.tables where table_schema='public';"
-    if ($LASTEXITCODE -ne 0) { throw "Cannot reach the Azure database. Is your IP in the server firewall?" }
-    if ([int]$existing.Trim() -gt 0) {
-        throw "The Azure database already has $($existing.Trim()) tables in public. Drop them first (or use -SkipRestore)."
+$connFile = Join-Path $SecretsDir "connections-$Environment.txt"
+if (-not (Test-Path $connFile)) { throw "$connFile not found. Run provision.ps1 first." }
+$ownerLine = Get-Content $connFile | Where-Object { $_ -match "Username=sm_${Environment}_owner;" } | Select-Object -First 1
+$appLine = Get-Content $connFile | Where-Object { $_ -match "Username=sm_${Environment}_app;" } | Select-Object -First 1
+$owner = ConvertFrom-NpgsqlConnection $ownerLine
+$appRole = (ConvertFrom-NpgsqlConnection $appLine)['username']
+$admin = @{
+    host = $owner['host']; port = '5432'; database = $owner['database']
+    username = $PostgresAdminUser
+    password = (Get-Content (Join-Path $SecretsDir "postgres-admin-password.txt") -Raw).Trim()
+}
+$storageAccount = "$StoragePrefix$Environment"
+Write-Host "Copying Supabase ($supabaseRef) -> $($owner['host'])/$($owner['database']) [$Environment]" -ForegroundColor Cyan
+
+# 1. Dump (cached)
+$dumpFile = Join-Path $WorkDir "supabase-public.dump"
+if ($FreshDump -or -not (Test-Path $dumpFile)) {
+    Write-Host "1/7 Dumping Supabase public schema..." -ForegroundColor Cyan
+    $env:PGPASSWORD = $source['password']
+    try {
+        & $pgDump (Get-ConnInfo $source) --schema=public --format=custom --no-owner --no-privileges --no-comments --file=$dumpFile
+        if ($LASTEXITCODE -ne 0) { throw "pg_dump failed" }
     }
-    & $pgRestore --dbname=$TargetConnection --no-owner --no-privileges --exit-on-error $dumpFile
-    if ($LASTEXITCODE -ne 0) { throw "pg_restore failed" }
+    finally { $env:PGPASSWORD = $null }
+} else {
+    Write-Host "1/7 Reusing dump from $((Get-Item $dumpFile).LastWriteTime) (use -FreshDump for a new one)." -ForegroundColor Cyan
 }
 
-# 3. Row counts
-Write-Host "3/5 Comparing row counts ..." -ForegroundColor Cyan
-$countSql = @"
-select table_name, (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, table_name), false, true, '')))[1]::text::bigint as rows
-from information_schema.tables where table_schema='public' and table_type='BASE TABLE' order by table_name;
+# 2. Restore as the owner, then move the tables into smartmoney
+Write-Host "2/7 Restoring into $($owner['database'])..." -ForegroundColor Cyan
+$existing = (Invoke-Sql $owner "select count(*) from pg_tables where schemaname in ('smartmoney','public');" | Select-Object -Last 1).Trim()
+if ([int]$existing -gt 0) {
+    if (-not $ResetTarget) { throw "Target already has $existing tables. Re-run with -ResetTarget to replace them (only before go-live)." }
+    Write-Host "    -ResetTarget: dropping $existing existing tables."
+    Invoke-Sql $owner @"
+do `$`$ declare r record; begin
+  for r in select schemaname, tablename from pg_tables where schemaname in ('smartmoney','public') and tableowner = current_user loop
+    execute format('drop table if exists %I.%I cascade', r.schemaname, r.tablename);
+  end loop; end `$`$;
+"@ | Out-Null
+}
+
+# The dump would also try to create schema "public"; restore everything else.
+$fullList = Join-Path $WorkDir "restore-full.list"
+$list = Join-Path $WorkDir "restore-$Environment.list"
+$tocLines = & $pgRestore -l $dumpFile
+if ($LASTEXITCODE -ne 0) { throw "pg_restore -l failed" }
+[IO.File]::WriteAllLines($fullList, [string[]]$tocLines, $Utf8NoBom)
+$kept = @($tocLines | Where-Object { $_ -notmatch ' SCHEMA - public ' -and $_ -notmatch 'COMMENT - SCHEMA public' })
+[IO.File]::WriteAllLines($list, [string[]]$kept, $Utf8NoBom)
+
+Invoke-Sql $admin "grant usage, create on schema public to $($owner['username']);" | Out-Null
+try {
+    $env:PGPASSWORD = $owner['password']
+    try {
+        $dbArg = "--dbname=" + (Get-ConnInfo $owner)
+        & $pgRestore $dbArg --no-owner --no-privileges --exit-on-error "--use-list=$list" $dumpFile
+        if ($LASTEXITCODE -ne 0) { throw "pg_restore failed" }
+    }
+    finally { $env:PGPASSWORD = $null }
+
+    Invoke-Sql $owner @"
+do `$`$ declare r record; begin
+  for r in select tablename from pg_tables where schemaname = 'public' and tableowner = current_user loop
+    execute format('alter table public.%I set schema smartmoney', r.tablename);
+  end loop; end `$`$;
+"@ | Out-Null
+}
+finally {
+    Invoke-Sql $admin "revoke usage, create on schema public from $($owner['username']);" | Out-Null
+}
+$moved = (Invoke-Sql $owner "select count(*) from pg_tables where schemaname = 'smartmoney';" | Select-Object -Last 1).Trim()
+Write-Host "    $moved tables now in schema smartmoney."
+
+# 3. Clean-up
+Write-Host "3/7 Cleaning data..." -ForegroundColor Cyan
+$prodOnly = if ($Environment -eq 'prod') {
+    "update ""Users"" set ""IsActive"" = false where ""IsActive"" and (""Email"" like '%@example.com' or ""Email"" like '%@test.local');"
+} else { "" }
+$cleanup = Invoke-Sql $owner @"
+set search_path = smartmoney;
+begin;
+with d as (delete from "RefreshTokens" returning 1) select 'refresh tokens removed: ' || count(*) from d;
+with d as (delete from "EmailVerificationOtps" where "IsUsed" or "ExpiresAt" < now() returning 1) select 'used/expired sign-up codes removed: ' || count(*) from d;
+with d as (delete from "PasswordResetOtps" where "IsUsed" or "ExpiresAt" < now() returning 1) select 'used/expired reset codes removed: ' || count(*) from d;
+with u as (update "Users" set "ProfileImageUrl" = null where "ProfileImageUrl" like '/uploads/%' returning 1) select 'legacy photo paths cleared: ' || count(*) from u;
+$prodOnly
+select 'active test accounts left: ' || count(*) from "Users" where "IsActive" and ("Email" like '%@example.com' or "Email" like '%@test.local');
+commit;
 "@
-$sourceCounts = & $psql --dbname=$SourceConnection --tuples-only --no-align --field-separator "|" --command $countSql
-$targetCounts = & $psql --dbname=$TargetConnection --tuples-only --no-align --field-separator "|" --command $countSql
-$mismatch = $false
-$targetMap = @{}
-foreach ($line in $targetCounts) { if ($line) { $parts = $line.Split('|'); $targetMap[$parts[0]] = $parts[1] } }
-foreach ($line in $sourceCounts) {
-    if (-not $line) { continue }
-    $parts = $line.Split('|')
-    $t = $targetMap[$parts[0]]
-    $ok = ($t -eq $parts[1])
-    if (-not $ok) { $mismatch = $true }
-    Write-Host ("    {0,-32} supabase={1,8} azure={2,8} {3}" -f $parts[0], $parts[1], $t, $(if ($ok) { "ok" } else { "MISMATCH" }))
-}
-if ($mismatch) { throw "Row counts differ; stop and investigate before rewriting URLs." }
+$cleanup | Where-Object { $_ } | ForEach-Object { Write-Host "    $_" }
 
-# 4. Media
-$supabasePublicPrefix = $null
-$azurePublicPrefix = $null
-if ($SupabaseUrl -and $StorageAccountName) {
-    $supabasePublicPrefix = "$($SupabaseUrl.TrimEnd('/'))/storage/v1/object/public"
-    $azurePublicPrefix = if ($AzurePublicBaseUrl) { $AzurePublicBaseUrl.TrimEnd('/') } else { "https://$StorageAccountName.blob.core.windows.net" }
-}
+# 4. Grants for the app login
+Write-Host "4/7 Granting $appRole read/write on the tables..." -ForegroundColor Cyan
+Invoke-Sql $owner @"
+grant select, insert, update, delete on all tables in schema smartmoney to $appRole;
+grant usage, select, update on all sequences in schema smartmoney to $appRole;
+"@ | Out-Null
 
+# 5. Row counts
+Write-Host "5/7 Comparing row counts with Supabase..." -ForegroundColor Cyan
+$countSql = "select table_name || '|' || (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, table_name), false, true, '')))[1]::text from information_schema.tables where table_schema = '{0}' and table_type = 'BASE TABLE' order by 1;"
+$sourceMap = @{}; foreach ($l in (Invoke-Sql $source ($countSql -f 'public'))) { if ($l -match '\|') { $p = $l.Split('|'); $sourceMap[$p[0]] = [int]$p[1] } }
+$targetMap = @{}; foreach ($l in (Invoke-Sql $owner ($countSql -f 'smartmoney'))) { if ($l -match '\|') { $p = $l.Split('|'); $targetMap[$p[0]] = [int]$p[1] } }
+$cleaned = @('RefreshTokens', 'EmailVerificationOtps', 'PasswordResetOtps')
+$problems = 0
+foreach ($t in ($sourceMap.Keys | Sort-Object)) {
+    $s = $sourceMap[$t]; $a = $targetMap[$t]
+    $state = if ($a -eq $s) { "ok" } elseif ($t -in $cleaned -and $a -le $s) { "cleaned" } else { $problems++; "MISMATCH" }
+    Write-Host ("    {0,-26} supabase={1,6} azure={2,6} {3}" -f $t, $s, $a, $state)
+}
+if ($problems -gt 0) { throw "$problems table(s) differ; investigate before using this database." }
+
+# 6. Images
 if (-not $SkipMedia) {
-    if (-not ($SupabaseUrl -and $SupabaseServiceRoleKey -and $StorageAccountName)) {
-        Write-Host "4/5 Skipping media copy: -SupabaseUrl, -SupabaseServiceRoleKey and -StorageAccountName are all needed." -ForegroundColor Yellow
-    } else {
-        Write-Host "4/5 Copying images ..." -ForegroundColor Cyan
-        $mediaDir = Join-Path $WorkDir "media"
-        $env:SUPABASE_URL = $SupabaseUrl
-        $env:SUPABASE_SERVICE_ROLE_KEY = $SupabaseServiceRoleKey
-        foreach ($bucket in @($ProfilePhotosContainer, $CatalogueContainer)) {
-            $dest = Join-Path $mediaDir $bucket
-            New-Item -ItemType Directory -Force $dest | Out-Null
-            & node (Join-Path $PSScriptRoot "copy-supabase-media.mjs") $bucket $dest
-            if ($LASTEXITCODE -ne 0) { throw "Downloading bucket $bucket failed" }
-            if ((Get-ChildItem $dest -Recurse -File | Measure-Object).Count -eq 0) {
-                Write-Host "    $bucket is empty, nothing to upload."
-                continue
-            }
-            & az storage blob upload-batch --account-name $StorageAccountName --auth-mode login `
-                --destination $bucket --source $dest --overwrite true --only-show-errors --output none
-            if ($LASTEXITCODE -ne 0) { throw "Uploading $bucket failed (is 'Storage Blob Data Contributor' granted to your login?)" }
+    Write-Host "6/7 Copying images to $storageAccount..." -ForegroundColor Cyan
+    $objects = Invoke-Sql $source "select bucket_id || '/' || name from storage.objects where bucket_id in ('profile-images','catalogue-media') order by 1;"
+    $mediaDir = Join-Path $WorkDir "media"
+    $supabasePrefix = "https://$supabaseRef.supabase.co/storage/v1/object/public"
+    foreach ($o in ($objects | Where-Object { $_ })) {
+        $target = Join-Path $mediaDir ($o -replace '/', '\')
+        if (-not (Test-Path $target)) {
+            New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
+            Invoke-WebRequest -Uri "$supabasePrefix/$o" -OutFile $target -UseBasicParsing -TimeoutSec 60
         }
-        Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY
     }
+    $key = Invoke-Az storage account keys list --resource-group $ResourceGroup --account-name $storageAccount --query "[0].value" --output tsv
+    foreach ($bucket in 'profile-images', 'catalogue-media') {
+        $dir = Join-Path $mediaDir $bucket
+        if (-not (Test-Path $dir)) { continue }
+        Invoke-Az storage blob upload-batch --account-name $storageAccount --account-key $key `
+            --destination $bucket --source $dir --overwrite true --only-show-errors --output none | Out-Null
+        Write-Host "    $($bucket): $((Get-ChildItem $dir -Recurse -File).Count) files uploaded."
+    }
+
+    $azurePrefix = "https://$storageAccount.blob.core.windows.net"
+    $columns = @(@('Users','ProfileImageUrl'), @('Stores','LogoUrl'), @('Stores','BannerUrl'), @('Offers','ImageUrl'), @('Categories','IconUrl'), @('Banners','ImageUrl'))
+    $sql = "set search_path = smartmoney;`nbegin;`n"
+    foreach ($c in $columns) {
+        $sql += "update ""$($c[0])"" set ""$($c[1])"" = replace(""$($c[1])"", '$supabasePrefix/', '$azurePrefix/') where ""$($c[1])"" like '$supabasePrefix/%';`n"
+    }
+    $sql += "commit;`n"
+    foreach ($c in $columns) {
+        $sql += "select 'still on Supabase in $($c[0]).$($c[1]): ' || count(*) from ""$($c[0])"" where ""$($c[1])"" like '%supabase.co%';`n"
+    }
+    Invoke-Sql $owner $sql | Where-Object { $_ } | ForEach-Object { Write-Host "    $_" }
 }
 
-# 5. URL rewrite
-if (-not $SkipUrlRewrite) {
-    if (-not $supabasePublicPrefix) {
-        Write-Host "5/5 Skipping URL rewrite: -SupabaseUrl and -StorageAccountName are needed." -ForegroundColor Yellow
-    } else {
-        Write-Host "5/5 Rewriting image URLs $supabasePublicPrefix/... -> $azurePublicPrefix/... " -ForegroundColor Cyan
-        $columns = @(
-            @("Users", "ProfileImageUrl"),
-            @("Stores", "LogoUrl"),
-            @("Stores", "BannerUrl"),
-            @("Offers", "ImageUrl"),
-            @("Categories", "IconUrl"),
-            @("Banners", "ImageUrl")
-        )
-        $sql = "begin;`n"
-        foreach ($c in $columns) {
-            $sql += "update ""$($c[0])"" set ""$($c[1])"" = replace(""$($c[1])"", '$supabasePublicPrefix/', '$azurePublicPrefix/') where ""$($c[1])"" like '$supabasePublicPrefix/%';`n"
-        }
-        $sql += "commit;`n"
-        $sqlFile = Join-Path $WorkDir "rewrite-urls-$stamp.sql"
-        Set-Content -Path $sqlFile -Value $sql -Encoding utf8
-        & $psql --dbname=$TargetConnection --set ON_ERROR_STOP=1 --file $sqlFile
-        if ($LASTEXITCODE -ne 0) { throw "URL rewrite failed (rolled back)" }
-        $left = & $psql --dbname=$TargetConnection --tuples-only --no-align --command "select count(*) from ""Users"" where ""ProfileImageUrl"" like '$supabasePublicPrefix/%';"
-        Write-Host "    Profile photos still on Supabase: $($left.Trim())"
-    }
+# 7. EF migration history vs the code
+Write-Host "7/7 Checking EF migration history..." -ForegroundColor Cyan
+$latestInCode = Get-ChildItem (Join-Path $PSScriptRoot "..\..\src\SmartMoney.Infrastructure\Persistence\Migrations") -Filter "*.cs" |
+    Where-Object { $_.Name -match '^\d{14}_.+\.cs$' -and $_.Name -notmatch '\.Designer\.cs$' } |
+    ForEach-Object { $_.BaseName } | Sort-Object | Select-Object -Last 1
+$latestInDb = (Invoke-Sql $owner "select max(""MigrationId"") from smartmoney.""__EFMigrationsHistory"";" | Select-Object -Last 1).Trim()
+Write-Host "    code: $latestInCode"
+Write-Host "    db:   $latestInDb"
+if ($latestInCode -ne $latestInDb) {
+    Write-Warning "The database is not on the latest migration. Apply it with the owner connection before deploying."
 }
 
 Write-Host ""
-Write-Host "Migration finished. Point the API at Azure (ConnectionStrings__DefaultConnection, Storage__Provider=AzureBlob) and restart it." -ForegroundColor Green
-Write-Host "The dump and downloaded images are in $WorkDir (git-ignored); delete them when you are happy."
+Write-Host "Done: $Environment is ready for the API." -ForegroundColor Green
+Write-Host "API connection string and storage connection string: $connFile"
